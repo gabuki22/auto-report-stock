@@ -1,0 +1,33 @@
+{
+  "subject": "[주간] 재고 지표 리포트 2026-08-18 (확인 필요)",
+  "to": [
+    "example@company.com"
+  ],
+  "from": "report-bot@company.com",
+  "attachments": [
+    {
+      "filename": "report.pdf",
+      "path": "C:\\Users\\당근\\Desktop\\L-wiki\\raw\\학습\\auto-report-재고\\outputs\\run_20260822_1707\\report.pdf",
+      "존재": true,
+      "size": 107948
+    },
+    {
+      "filename": "report.md",
+      "path": "C:\\Users\\당근\\Desktop\\L-wiki\\raw\\학습\\auto-report-재고\\outputs\\run_20260822_1707\\report.md",
+      "존재": true,
+      "size": 33446
+    },
+    {
+      "filename": "metrics.csv",
+      "path": "C:\\Users\\당근\\Desktop\\L-wiki\\raw\\학습\\auto-report-재고\\outputs\\run_20260822_1707\\metrics.csv",
+      "존재": true,
+      "size": 3240
+    },
+    {
+      "filename": "comparison.csv",
+      "path": "C:\\Users\\당근\\Desktop\\L-wiki\\raw\\학습\\auto-report-재고\\outputs\\run_20260822_1707\\comparison.csv",
+      "존재": true,
+      "size": 3996
+    }
+  ]
+}

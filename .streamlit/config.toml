@@ -1,0 +1,9 @@
+[server]
+# 코드를 고치면 자동으로 다시 실행한다.
+# 기본값(false)이면 브라우저에 "File change / Rerun" 알림만 뜨고 옛 코드가 계속 돌아,
+# 고친 줄이 화면에 반영되지 않는다 (2026-08-18 실제로 겪음).
+runOnSave = true
+headless = true
+
+[browser]
+gatherUsageStats = false

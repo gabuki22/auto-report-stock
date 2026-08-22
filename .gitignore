@@ -1,0 +1,22 @@
+# 실행 결과 — 재생성 가능하므로 올리지 않는다.
+# 다만 **발송 확정까지 마친 실행 하나**는 배포본에 포함한다.
+# 접속자가 사이드바에서 불러와 1~8단계 전 과정을 볼 수 있게 하기 위해서다
+# (BigQuery 인증 없이도 5~8단계는 동작한다).
+outputs/run_*/
+!outputs/run_20260822_1707/
+
+__pycache__/
+.streamlit/secrets.toml
+*.pyc
+
+# 업로드 실습 CSV — 용량이 크고 재생성 가능하다.
+# 배포본에는 확정 실행 폴더 안의 원본 사본이 이미 들어 있다.
+_data/
+
+# 폰트는 저장소에 넣지 않는다(합 11.8MB).
+# `py -X utf8 dev_tools/get_fonts.py` 로 언제든 다시 받는다.
+fonts/*.ttf
+fonts/_font_test.pdf
+
+# 강의 CS 카탈로그 백업 — 이 프로젝트와 무관
+catalog/_cs_backup/
