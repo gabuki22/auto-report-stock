@@ -242,6 +242,23 @@ def compare(current_df: pd.DataFrame, previous_df: pd.DataFrame) -> pd.DataFrame
         "절대변화", "상대변화율", "퍼센트포인트변화", "비교상태", "이유"])
 
 
+def prev_label_from(comparison_df, period: str) -> str:
+    """비교표에서 **전 기간 라벨**을 되찾는다 — BigQuery를 부르지 않고.
+
+    비교표의 `이유` 칸에 compare()가 남긴 전 기간 표기를 읽는다.
+    없으면 달력 기준으로 물러선다. 라벨 하나 때문에 인증이 필요해서는 안 된다.
+    """
+    import re as _re
+    try:
+        for s in comparison_df["이유"].dropna().astype(str):
+            m = _re.search(r"전월\((\d{4}-\d{2}(?:-\d{2})?)\)", s)
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+    return previous_month(period)
+
+
 def prev_label(previous_df: pd.DataFrame) -> str:
     """전월 표기 — 결과가 비어 있으면 '전월'."""
     if len(previous_df) and "month" in previous_df.columns:

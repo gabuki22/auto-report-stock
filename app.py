@@ -522,7 +522,18 @@ else:
             st.warning(f"**{r['지표명']}** — {r['status']}")
 
         # ── 전월 대비 ─────────────────────────────────────────────────
-        prev_period = cmp.previous_period(period, calc.make_client())
+        # ★ 전 기간 라벨을 만드는 데 **BigQuery 클라이언트를 무조건 만들지 않는다.**
+        #   여기서 make_client()를 조건 없이 부르면, 인증이 없는 환경(배포본에서
+        #   기존 실행을 불러보는 경우)에서 TransportError로 화면이 통째로 죽는다.
+        #   비교표가 이미 있으면 그 안의 전 기간 값을 쓰고, 없을 때만 조회한다.
+        #   조회에 실패해도 달력 기준으로 물러선다 — 라벨 하나 때문에 앱이 멈추면 안 된다.
+        if ss.comparison_df is not None and len(ss.comparison_df):
+            prev_period = cmp.prev_label_from(ss.comparison_df, period)
+        else:
+            try:
+                prev_period = cmp.previous_period(period, calc.make_client())
+            except Exception:                                   # noqa: BLE001
+                prev_period = cmp.previous_month(period)
         st.markdown("---")
         st.markdown(f"### 5. 전월 대비 &nbsp;<span style='font-size:0.72em;color:#64748b'>"
                     f"{period} vs {prev_period}</span>", unsafe_allow_html=True)
