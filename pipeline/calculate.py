@@ -388,10 +388,26 @@ def auth_available() -> bool:
       전부 파일에서 읽으므로 동작한다. 문제는 사용자가 그 사실을 모르고 새 파일을
       올린 뒤 '스테이징 적재 중...'에서 영문 없이 멈추는 것이다.
       **되지 않을 일은 시작하기 전에 막는다** — 오류로 알려주는 것보다 낫다.
+
+    ★★ `google.auth.default()`를 그대로 부르면 안 된다.
+      자격증명을 못 찾으면 마지막에 **GCE 메타데이터 서버(169.254.169.254)에 접속을
+      시도**하는데, 그 주소가 응답도 거절도 하지 않는 환경(배포본)에서는 타임아웃까지
+      화면이 멈춘다. 실제로 1단계에서 진행이 안 되는 것처럼 보였다 — 오류도 없이.
+      **판정 하나가 화면을 세우면 안 된다.**
+
+      여기서 알고 싶은 것은 *"파일이나 환경변수로 준 자격증명이 있는가"* 하나뿐이므로
+      **네트워크를 건드리지 않고** 그것만 본다.
+
+    한계
+        gcloud SDK 자체 로그인처럼 **비표준 위치**의 자격증명은 못 본다.
+        그 경우 `GOOGLE_APPLICATION_CREDENTIALS`를 지정하면 인식한다.
     """
-    try:
-        import google.auth
-        google.auth.default()
-        return True
-    except Exception:
-        return False
+    import os
+
+    if cfg := os.environ.get("CLOUDSDK_CONFIG"):        # gcloud 설정 위치를 옮긴 경우
+        return (Path(cfg) / "application_default_credentials.json").exists()
+    if p := os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        return Path(p).exists()
+    base = (Path(os.environ["APPDATA"]) if os.name == "nt" and os.environ.get("APPDATA")
+            else Path.home() / ".config")
+    return (base / "gcloud" / "application_default_credentials.json").exists()
