@@ -191,9 +191,24 @@ st.markdown(f"## 1단계 — 데이터 파일 투입 "
             f"{common.badge('완료' if done1 else '진행중', '통과' if done1 else '경고')}",
             unsafe_allow_html=True)
 
-up = st.file_uploader("CSV 파일을 올리세요", type=["csv"],
-                      label_visibility="collapsed",
-                      key=f"uploader_{ss.uploader_key}")
+# ★ 자격증명이 없으면 업로드를 **아예 막는다.**
+#   1~4단계는 BigQuery로 계산하므로 인증 없이는 '스테이징 적재 중...'에서 멈춘다.
+#   되지 않을 일을 시작하게 두고 오류로 알려주는 것보다, 시작 전에 막고 되는 길을 가리키는 편이 낫다.
+#   결과를 세션에 캐시한다 — 매 rerun마다 자격증명을 찾으면 화면이 느려진다.
+if "bq_auth" not in ss:
+    ss.bq_auth = calc.auth_available()
+
+if not ss.bq_auth:
+    st.info("🔒 **읽기 전용으로 열려 있습니다** — 이 배포본에는 BigQuery 자격증명이 없어 "
+            "새 파일을 계산할 수 없습니다.\n\n"
+            "왼쪽 **기존 실행 불러오기**에서 **✔ 표시된 실행**을 고르면 "
+            "1~8단계 전 과정과 리포트·이메일 확정본을 그대로 볼 수 있습니다.")
+    st.caption("새 파일로 직접 돌려 보려면 저장소를 내려받아 로컬에서 실행합니다 — README 참고.")
+    up = None
+else:
+    up = st.file_uploader("CSV 파일을 올리세요", type=["csv"],
+                          label_visibility="collapsed",
+                          key=f"uploader_{ss.uploader_key}")
 if up is not None:
     # ★ file_uploader는 **새 파일을 고를 때만이 아니라 모든 rerun마다** 같은 파일 객체를
     #   계속 돌려준다. 그래서 이 블록을 조건 없이 실행하면 확정 직후의 rerun에서
@@ -1037,7 +1052,20 @@ for n, name, who in common.STEPS[3:]:
             #   전혀 다른 실패다 — 멈추면 마크다운 리포트까지 못 보게 된다.
             pdf_ctx = ss.pdf_ctx or {"기간": str(ss.metrics_df['month'].iloc[0])}
             font_ok, missing = pr.font_status()
-            if font_ok:
+            saved_pdf = Path(ss.run_dir) / "report.pdf"
+
+            # ★ **확정된 실행은 열어보기만 해도 바뀌면 안 된다.**
+            #   아래 생성 블록은 게이트 밖이라 화면을 다시 그릴 때마다 PDF를 새로 만들어
+            #   덮어썼다. fpdf2가 문서에 **생성 시각을 박기 때문에** 내용이 같아도 바이트가
+            #   달라진다 — 확정 실행을 불러보기만 했는데 git이 '수정됨'으로 잡았다(실측).
+            #   확정 = 그 시점의 산출물이 그대로 남아 있다는 뜻이므로, 있는 것을 그대로 낸다.
+            if (Path(ss.run_dir) / "APPROVED").exists() and saved_pdf.exists():
+                d2.download_button("report.pdf ↓", saved_pdf.read_bytes(),
+                                   file_name="report.pdf", mime="application/pdf",
+                                   key="dl_pdf_final", width="stretch")
+                d3.caption(f"확정본 PDF ({saved_pdf.stat().st_size / 1024:,.0f}KB) — "
+                           f"**확정된 실행이라 다시 만들지 않습니다.**")
+            elif font_ok:
                 try:
                     pdf_bytes = make_pdf_cached(ss.report_md, pdf_ctx)
                     (Path(ss.run_dir) / "report.pdf").write_bytes(pdf_bytes)
@@ -1052,11 +1080,21 @@ for n, name, who in common.STEPS[3:]:
                               width="stretch")
                     d3.error(f"PDF 생성 실패: {type(e).__name__} — {e}")
             else:
-                d2.button("report.pdf ↓", disabled=True, key="dl_pdf_off",
-                          width="stretch")
-                d3.warning(f"한글 폰트 없음 — {', '.join(missing)}")
-                with st.expander("폰트 받는 방법", expanded=False):
-                    st.markdown(pr.MISSING_FONT_HELP)
+                # ★ 폰트가 없어 **새로 만들지는 못해도**, 이 실행에서 이미 만들어 둔 PDF가
+                #   있으면 그것을 내려받게 한다 — 결과물이 있는데 못 받는 것은 손해다.
+                if saved_pdf.exists():
+                    d2.download_button("report.pdf ↓", saved_pdf.read_bytes(),
+                                       file_name="report.pdf", mime="application/pdf",
+                                       key="dl_pdf_saved", width="stretch")
+                    d3.caption(f"이 실행에서 생성된 PDF "
+                               f"({saved_pdf.stat().st_size / 1024:,.0f}KB) — "
+                               f"한글 폰트가 없어 **새로 만들지는 않았습니다.**")
+                else:
+                    d2.button("report.pdf ↓", disabled=True, key="dl_pdf_off",
+                              width="stretch")
+                    d3.warning(f"한글 폰트 없음 — {', '.join(missing)}")
+                    with st.expander("폰트 받는 방법", expanded=False):
+                        st.markdown(pr.MISSING_FONT_HELP)
         ss.step = max(ss.step, 6)
         continue
 

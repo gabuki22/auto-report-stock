@@ -379,3 +379,19 @@ def make_client():
     """BigQuery 클라이언트 — MCP가 아니라 이 스크립트가 직접 연결한다(무인 실행 요건)."""
     from google.cloud import bigquery
     return bigquery.Client(project=config.BQ_PROJECT) if config.BQ_PROJECT else bigquery.Client()
+
+
+def auth_available() -> bool:
+    """BigQuery 자격증명이 이 환경에 있는가.
+
+    ★ 배포본(Streamlit Cloud)에는 자격증명이 없다. 그래도 **기존 실행 불러오기**는
+      전부 파일에서 읽으므로 동작한다. 문제는 사용자가 그 사실을 모르고 새 파일을
+      올린 뒤 '스테이징 적재 중...'에서 영문 없이 멈추는 것이다.
+      **되지 않을 일은 시작하기 전에 막는다** — 오류로 알려주는 것보다 낫다.
+    """
+    try:
+        import google.auth
+        google.auth.default()
+        return True
+    except Exception:
+        return False

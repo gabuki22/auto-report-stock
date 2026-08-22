@@ -1,7 +1,9 @@
 streamlit
 pandas
 pyyaml
+plotly
 google-cloud-bigquery
+db-dtypes
 pyarrow
 fpdf2
 pytest
