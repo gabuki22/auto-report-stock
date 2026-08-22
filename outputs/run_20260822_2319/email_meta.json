@@ -7,25 +7,25 @@
   "attachments": [
     {
       "filename": "report.pdf",
-      "path": "run_20260822_2235/report.pdf",
+      "path": "run_20260822_2319/report.pdf",
       "존재": true,
-      "size": 113506
+      "size": 113816
     },
     {
       "filename": "report.md",
-      "path": "run_20260822_2235/report.md",
+      "path": "run_20260822_2319/report.md",
       "존재": true,
-      "size": 33095
+      "size": 33434
     },
     {
       "filename": "metrics.csv",
-      "path": "run_20260822_2235/metrics.csv",
+      "path": "run_20260822_2319/metrics.csv",
       "존재": true,
       "size": 3240
     },
     {
       "filename": "comparison.csv",
-      "path": "run_20260822_2235/comparison.csv",
+      "path": "run_20260822_2319/comparison.csv",
       "존재": true,
       "size": 3996
     }

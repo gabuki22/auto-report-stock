@@ -1008,7 +1008,8 @@ for n, name, who in common.STEPS[3:]:
 
         if ss.report_md:
             secs = rp.split_sections(ss.report_md)
-            todo = [s for s in secs if s["미작성"]]
+            # 장과 소절을 함께 — 소절(1장 핵심 시사점)이 빠져 빈칸이 확정된 적이 있다
+            todo, subs = rp.unwritten(secs)
 
             # 1. 생성 정보 — 어느 정의로 만든 문서인지 나중에 추적할 수 있어야 한다
             log = json.loads((Path(ss.run_dir) / "run_log.json").read_text(encoding="utf-8"))
@@ -1018,12 +1019,14 @@ for n, name, who in common.STEPS[3:]:
             i3.metric("카탈로그", m_meta.get("생성일시", "?")[:10])
 
             # 2. 미작성 경고 — 숫자만 있는 문서가 완결된 분석으로 오해되지 않게
-            if todo:
-                st.warning(f"**{len(todo)}개 장이 미작성 상태입니다** — "
-                           + " · ".join(f"{s['번호']}장 {s['제목']}" for s in todo)
-                           + ". 이 장들은 사람이 작성해야 합니다.")
+            if todo or subs:
+                _d = ([f"{s['번호']}장 {s['제목']}" for s in todo]
+                      + [f"**{s['번호']}장 {rp.SUB_TITLE}**" for s in subs])
+                st.warning("**미작성 " + f"{len(todo) + len(subs)}건** — " + " · ".join(_d)
+                           + ". 사람이 작성해야 합니다 — "
+                           + f"`{ms.MANUAL_PATH.name}` 를 채우고 다시 생성하세요.")
             else:
-                st.success("모든 장이 작성되었습니다.")
+                st.success("모든 장과 소절이 작성되었습니다.")
 
             # 3. 병합 결과 — 무엇이 채워졌고 무엇이 남았는지
             mi = ss.merge_info or {}
@@ -1051,13 +1054,15 @@ for n, name, who in common.STEPS[3:]:
                     st.rerun()
                 e2.caption(f"경로: `{ms.MANUAL_PATH.relative_to(config.BASE_DIR)}`")
 
-            # 3. 장별 expander — 자동 생성 장은 펼치고, 사람이 쓸 장은 배지와 함께 접는다
+            # 3. 장별 expander — **전부 접은 채로 연다.**
+            #   예전에는 작성된 장을 펼쳤는데, 8장이 한꺼번에 펼쳐지면 화면이 리포트
+            #   전문이 되어 **목차 역할을 못 한다.** 접혀 있어야 어떤 장이 있는지 한눈에 보이고,
+            #   볼 장만 열게 된다. 미작성은 제목의 `· 작성 필요`가 접힌 채로도 알려 준다.
             for s in secs:
                 if not s["번호"]:
                     continue
                 mark = " · 작성 필요" if s["미작성"] else ""
-                with st.expander(f"{s['번호']}. {s['제목']}{mark}",
-                                 expanded=not s["미작성"]):
+                with st.expander(f"{s['번호']}. {s['제목']}{mark}", expanded=False):
                     if s["미작성"]:
                         st.markdown(badge("작성 필요", "경고"),
                                     unsafe_allow_html=True)

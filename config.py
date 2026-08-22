@@ -139,6 +139,9 @@ EMAIL_FROM = "report-bot@company.com"
 # "config 한 파일만 고치면 된다"는 전제가 깨진다.
 APP_TITLE = "주간 재고 리포트 자동화"
 REPORT_SUBJECT = "재고 지표 리포트"      # 이메일 제목에 들어가는 본문
+# 리포트 표지·본문 제목. ★ "주간 지표 리포트"만으로는 **무엇에 대한 것인지** 없다.
+#   받는 사람은 여러 보고서를 함께 받는다 — 제목이 주제를 담아야 골라 읽는다.
+REPORT_TITLE = "주간 재고 리포트"
 
 EMAIL_SUBJECT_PREFIX = "[주간]"
 

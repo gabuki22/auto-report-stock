@@ -29,7 +29,6 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common  # noqa: E402
 import config  # noqa: E402
-import config  # noqa: E402
 from pipeline import phrasing as ph  # noqa: E402
 from pipeline import report as rp  # noqa: E402
 
@@ -47,8 +46,14 @@ def subject(ctx: dict, report_md: str) -> str:
 
 
 def unwritten(report_md: str) -> list[dict]:
-    """아직 사람이 안 쓴 장. **장 번호가 아니라 자리표시자 존재로** 판정한다."""
-    return [s for s in rp.split_sections(report_md) if s["미작성"]]
+    """아직 사람이 안 쓴 곳. **장 번호가 아니라 자리표시자 존재로** 판정한다.
+
+    ★ 장뿐 아니라 **소절**도 센다. 1장 핵심 시사점은 소절이라 빠져 있었고,
+      그 결과 요약 한 줄이 빈 문서가 **제목에 "(초안)"도 없이** 확정됐다
+      (실측 run_20260822_2235). 제목 꼬리표·표지 경고·화면 경고가 같은 답을 써야 한다.
+    """
+    todo, subs = rp.unwritten(rp.split_sections(report_md))
+    return todo + [{**s, "제목": rp.SUB_TITLE} for s in subs]
 
 
 def key_metrics(ctx: dict) -> list[dict]:
@@ -124,7 +129,7 @@ def body_text(ctx: dict, report_md: str) -> str:
     """HTML을 지원하지 않는 클라이언트용 본문. **같은 재료로 같은 순서.**"""
     v = ctx.get("validation") or {}
     todo = unwritten(report_md)
-    L = [f"{ctx.get('기간', '')} {getattr(config, 'PERIOD_LABEL', '월간')} 지표 리포트",
+    L = [f"{ctx.get('기간', '')} {getattr(config, 'REPORT_TITLE', '지표 리포트')}",
          f"생성일시 {ctx.get('생성일시', '—')}", ""]
 
     L += ["[핵심 지표]"]

@@ -42,6 +42,7 @@ from pipeline import profile as pf  # noqa: E402
 _PERIOD = getattr(config, "PERIOD_LABEL", "월간")
 _PREV = getattr(config, "PREV_LABEL", "전월")
 _CURR = getattr(config, "CURR_LABEL", "당월")
+_TITLE = getattr(config, "REPORT_TITLE", f"{_PERIOD} 지표 리포트")
 
 # 지표 하나에 인용할 인사이트 상한. tags 교집합은 흔한 태그 하나로도 걸려서
 # ("이탈분석" 하나에 5건) 5장이 목록으로 뒤덮인다. 자를 때는 **몇 건을 줄였는지 밝힌다.**
@@ -53,6 +54,13 @@ MAX_INSIGHTS = 3
 #   "장"과 "소절"을 구분한다 — 1장의 핵심 시사점은 소절이라 미작성 장 수에 세지 않는다.
 PLACEHOLDER_SECTION = "이 장은 사람이 작성합니다"
 PLACEHOLDER_SUB = "이 소절은 사람이 작성합니다"
+
+# ★ 1장의 **핵심 시사점**도 사람이 쓴다 — 장이 아니라 소절이다.
+#   장이 아니라는 이유로 미작성 집계에서 빠져 있었고, 그 결과
+#   **가장 먼저 읽히는 한 줄이 빈칸인 채로 확정·발송됐다**(실측: run_20260822_2235,
+#   화면은 "미작성 0장"이라고 말했다). 소절도 세고, 사람이 쓸 자리를 열어 준다.
+SUB_KEY = 1
+SUB_TITLE = "핵심 시사점"
 
 # 사람이 써야 하는 장 — 지우지 않고 자리표시자를 남긴다.
 # ★ 번호·제목·문구를 **여기 한 곳에** 둔다. 리포트 본문, 화면의 미작성 판정,
@@ -167,8 +175,17 @@ def _flag_rows(ctx) -> list[list[str]]:
         base = mmap.get(r["metric_id"], r)
         cur = ph.fmt_value(r.get("당월"), base.get("유형", ""), r["지표명"],
                            r["metric_id"], base.get("단위", ""))
+        # ★ **%만으로는 크기를 못 읽는다.** "-3.34%"가 얼마인지 되물어야 하면
+        #   요약이 아니다. 읽는 사람이 생산관리·임원이므로 **금액·수량을 함께** 낸다.
+        #   (4장 표에는 전 기간 값이 있지만, 1장에서 4장으로 내려가야 한다면
+        #    그 역시 요약이 아니다.)
+        prv = ph.fmt_value(r.get("전월"), base.get("유형", ""), r["지표명"],
+                           r["metric_id"], base.get("단위", ""))
+        #   `common.fmt_delta`는 화면 표와 **같은 함수**다 — 방향 화살표까지 같이 온다.
+        #   요약과 화면이 다른 함수를 쓰면 같은 지표가 두 모양으로 보인다.
+        delta = common.blank_safe(common.fmt_delta({**r, "단위": base.get("단위", "")}))
         basis = common.blank_safe(x.get("기준"))          # 예: "5% (정의서)"
-        rows.append([r["지표명"], cur, _rate_text(r), basis or "—"])
+        rows.append([r["지표명"], cur, prv, delta or "—", _rate_text(r), basis or "—"])
     return rows
 
 
@@ -184,7 +201,7 @@ def header(ctx) -> str:
                     f"생성 {meta.get('생성일시', '?')}"],
     ]
     return ("\n".join([
-        f"# {_PERIOD} 지표 리포트 — {period}",
+        f"# {_TITLE} — {period}",
         "",
         _table(["항목", "값"], rows),
         "",
@@ -223,7 +240,8 @@ def section_1_summary(ctx) -> str:
     rows = _flag_rows(ctx)
     if rows:
         lines += [f"**임계값을 넘은 지표 {len(rows)}종**", "",
-                  _table(["지표", _CURR, f"{_PREV} 대비", "임계값"], rows, "lrrr"), ""]
+                  _table(["지표", _CURR, _PREV, "변화", "변화율", "임계값"],
+                         rows, "lrrrrr"), ""]
     else:
         lines += ["임계값을 넘는 변동이 있는 지표가 없다.", ""]
 
@@ -752,7 +770,19 @@ def split_sections(md: str) -> list[dict]:
         # ★ 장 번호가 아니라 **자리표시자가 남아 있는지**로 판정한다.
         #   번호(2·5·6)로 박으면 Day4에서 사람이 2장을 채워도 계속 "작성 필요"로 보인다.
         s["미작성"] = PLACEHOLDER_SECTION in s["본문"]
+        # ★ 소절 미작성은 **따로 센다.** 장과 같은 칸에 넣으면 "2장이 통째로 비었다"와
+        #   "요약 한 줄이 비었다"가 구분되지 않는다. 둘 다 알려야 하되 뜻은 다르다.
+        s["미작성소절"] = PLACEHOLDER_SUB in s["본문"]
     return [s for s in out if s["본문"] or s["번호"]]
+
+
+def unwritten(secs: list[dict]) -> tuple[list, list]:
+    """(미작성 장, 미작성 소절) — 표지·화면·게이트가 **같은 답**을 쓰게 한다.
+
+    각자 세면 화면은 "0장"인데 문서에는 빈칸이 남는 일이 생긴다. 실제로 생겼다.
+    """
+    return ([s for s in secs if s.get("미작성")],
+            [s for s in secs if s.get("미작성소절")])
 
 
 def mask_human_sections(md: str) -> str:

@@ -32,6 +32,7 @@ import config  # noqa: E402
 _PERIOD = getattr(config, "PERIOD_LABEL", "월간")
 _PREV = getattr(config, "PREV_LABEL", "전월")
 _CURR = getattr(config, "CURR_LABEL", "당월")
+_TITLE = getattr(config, "REPORT_TITLE", f"{_PERIOD} 지표 리포트")
 
 # 이메일 표준 폭. 이보다 넓으면 모바일 클라이언트에서 가로 스크롤이 생긴다.
 WIDTH = 600
@@ -153,7 +154,7 @@ def render(ctx: dict, report_md: str) -> str:
 
   <tr><td style="background:{HEAD_BG};padding:18px 24px;border-radius:8px 8px 0 0">
     <div style="font-size:17px;font-weight:bold;color:{INK}">
-      {_PERIOD} 지표 리포트 &mdash; {_esc(period)}</div>
+      {_TITLE} &mdash; {_esc(period)}</div>
     <div style="font-size:12px;color:{MUTED};padding-top:4px">
       생성일시 {_esc(ctx.get('생성일시', '—'))}</div>
   </td></tr>

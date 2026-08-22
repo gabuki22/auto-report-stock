@@ -50,9 +50,10 @@ HEAD = (15, 23, 42)             # 제목 글자 — 본문보다 진하게
 RAIL = (100, 116, 139)          # 장 제목 아래 레일 · 소제목 왼쪽 막대
 
 
-def _period_label() -> str:
-    """표지 제목의 기간 이름 — config 한 곳에서만 온다."""
-    return getattr(config, "PERIOD_LABEL", "월간")
+def _title() -> str:
+    """표지 제목 — config 한 곳에서만 온다. 주제를 담아야 골라 읽을 수 있다."""
+    return getattr(config, "REPORT_TITLE",
+                   f'{getattr(config, "PERIOD_LABEL", "월간")} 지표 리포트')
 
 
 def _rgb(hex_color: str) -> tuple[int, int, int]:
@@ -186,12 +187,14 @@ def _reset(pdf) -> None:
 
 def _cover(pdf, md: str, ctx: dict) -> None:
     secs = rp.split_sections(md)
-    todo = [s for s in secs if s["미작성"]]
+    # ★ 장과 **소절**을 함께 센다. 소절을 빼고 세었더니 "미작성 0장"이라 적힌
+    #   표지를 달고 **요약 한 줄이 빈** 문서가 나갔다(실측 run_20260822_2235).
+    todo, subs = rp.unwritten(secs)
 
     pdf.add_page()
     pdf.ln(50)
     pdf.set_font(FONT_NAME, "B", 22)
-    pdf.multi_cell(0, 12, f"{_period_label()} 지표 리포트", align="C",
+    pdf.multi_cell(0, 12, _title(), align="C",
                    new_x="LMARGIN", new_y="NEXT")
     pdf.set_font(FONT_NAME, "B", 16)
     pdf.multi_cell(0, 10, str(ctx.get("기간", "")), align="C",
@@ -210,14 +213,18 @@ def _cover(pdf, md: str, ctx: dict) -> None:
 
     # 미작성 경고 — 표지에서 바로 보여야 한다. 숫자만 있는 문서를
     # 완결된 분석으로 오해하고 그대로 전달하는 것을 막는 자리다.
-    if todo:
+    if todo or subs:
         amber = _rgb(common.STATUS["경고"][0])
         pdf.set_text_color(*amber)
         pdf.set_font(FONT_NAME, "B", 11)
-        pdf.multi_cell(0, 7, f"{len(todo)}개 장이 미작성 상태입니다", align="C",
+        _n = f"{len(todo)}개 장" if todo else ""
+        _n += (" · " if todo and subs else "") + (f"{len(subs)}개 소절" if subs else "")
+        pdf.multi_cell(0, 7, f"{_n}이 미작성 상태입니다", align="C",
                        new_x="LMARGIN", new_y="NEXT")
         pdf.set_font(FONT_NAME, "", 9)
-        pdf.multi_cell(0, 6, " · ".join(f"{s['번호']}장 {s['제목']}" for s in todo),
+        _d = ([f"{s['번호']}장 {s['제목']}" for s in todo]
+              + [f"{s['번호']}장 {rp.SUB_TITLE}" for s in subs])
+        pdf.multi_cell(0, 6, " · ".join(_d),
                        align="C", new_x="LMARGIN", new_y="NEXT")
         _reset(pdf)                                    # ★ 반드시 복원
 

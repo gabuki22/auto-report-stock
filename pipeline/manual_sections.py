@@ -51,6 +51,10 @@ def template(period: str = "", author: str = "(이름)") -> str:
            f"대상기간: {period}",
            f"작성자: {author}",
            "---", ""]
+    # ★ 1장 시사점을 **맨 앞에** 둔다. 가장 먼저 읽히는 한 줄이므로 가장 먼저 쓴다.
+    out += [f"## {rp.SUB_KEY}. {rp.SUB_TITLE}", "",
+            "<!-- 이번 회차에서 무엇이 가장 중요한가. 한두 문장. "
+            "숫자는 위 표에 있으니 여기에는 **그래서 무엇을 해야 하는가**를 쓴다. -->", ""]
     for n, spec in rp.HUMAN_SECTIONS.items():
         out += [rp.heading(n), "",
                 f"<!-- {spec['작성힌트']} -->", ""]
@@ -124,6 +128,27 @@ def load_manual(period: str) -> dict:
     return {"장": sections, "경고": warns, "메타": meta, "생성됨": created}
 
 
+def _swap_sub(body: str, text: str) -> str:
+    """자리표시자가 든 **인용 블록만** 사람이 쓴 문장으로 바꾼다.
+
+    자리표시자는 `> ` 로 시작하는 연속된 줄이다. 그 덩어리를 통째로 걷어내고
+    사람 문장을 같은 인용 모양으로 넣는다 — 인용 블록이라야 **앱이 쓴 서술과
+    구분**된다(사람 문장에는 인과·제안이 당연히 들어 있다).
+    """
+    lines, out, dropped = body.splitlines(), [], False
+    i = 0
+    while i < len(lines):
+        if not dropped and rp.PLACEHOLDER_SUB in lines[i]:
+            while i < len(lines) and lines[i].lstrip().startswith(">"):
+                i += 1
+            out += [f"> **{rp.SUB_TITLE}** — " + text.replace("\n", "\n> ")]
+            dropped = True
+            continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out).strip()
+
+
 def merge_into_report(report_md: str, manual: dict) -> tuple[str, dict]:
     """리포트의 자리표시자를 사람이 쓴 내용으로 바꾼다.
 
@@ -149,6 +174,17 @@ def merge_into_report(report_md: str, manual: dict) -> tuple[str, dict]:
             merged.append(s["번호"])
         elif s["미작성"]:
             remain.append(s["번호"])
+        # ★ 1장은 **표는 자동, 한 줄만 사람**이다. 장 전체를 갈아 끼우면 표가 사라진다.
+        #   그래서 자리표시자가 든 인용 블록만 바꾼다.
+        if s.get("미작성소절"):
+            sub = (written.get(rp.SUB_KEY) or "").strip()
+            if sub and s["번호"] != rp.SUB_KEY:
+                sub = ""                      # 다른 장에 잘못 끼워 넣지 않는다
+            if sub:
+                body = _swap_sub(body, sub)
+                merged.append(f"{s['번호']}-{rp.SUB_TITLE}")
+            else:
+                remain.append(f"{s['번호']}-{rp.SUB_TITLE}")
         out_lines.append(f"{head}\n\n{body}")
 
     return "\n\n".join(out_lines).rstrip() + "\n", {
