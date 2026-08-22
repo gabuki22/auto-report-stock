@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""월간 리포트 자동화 — 8단계 앱 (6주차 Day1: 1~2단계 전반)
+"""기간 리포트 자동화 — 8단계 앱 (6주차 Day1: 1~2단계 전반)
 
 사용자는 넣기 한 번, 승인 세 번만 한다. 승인 없이 다음 단계로 넘어가지 않는다.
 실행: py -m streamlit run app.py
@@ -17,6 +17,13 @@ import pandas as pd
 
 import common
 import config
+
+# ★ 기간 이름은 config 한 곳에서 온다 — 화면·이메일·리포트가 같은 말을 쓰게 한다.
+#   ⚠️ 이것은 **표시 문자열**이다. `r["당월"]`·`c.get("전월")`은 DataFrame
+#      컬럼 키이므로 바꾸면 안 된다 — 표시와 키를 한꺼번에 치환하면 조용히 깨진다.
+_PERIOD = getattr(config, "PERIOD_LABEL", "월간")
+_PREV = getattr(config, "PREV_LABEL", "전월")
+_CURR = getattr(config, "CURR_LABEL", "당월")
 from pipeline import calculate as calc
 from pipeline import manual_sections as ms
 from pipeline import charts as ch
@@ -555,7 +562,7 @@ else:
 
         if ss.comparison_df is None:
             try:
-                with st.spinner(f"전월({prev_period}) 계산 중…"):
+                with st.spinner(f"{_PREV}({prev_period}) 계산 중…"):
                     client = calc.make_client()
                     plog: dict = {}
                     pdv: dict = {}
@@ -571,13 +578,13 @@ else:
                 comp.to_csv(Path(ss.run_dir) / "comparison.csv", index=False,
                             encoding="utf-8-sig")
             except Exception as e:                                  # noqa: BLE001
-                st.error(f"전월 계산 실패: {type(e).__name__} {str(e)[:300]}")
+                st.error(f"{_PREV} 계산 실패: {type(e).__name__} {str(e)[:300]}")
                 ss.comparison_df = pd.DataFrame()
 
         comp = ss.comparison_df
         if len(comp):
-            head = ("<tr><th align='left'>지표명</th><th align='right'>당월</th>"
-                    "<th align='right'>전월</th><th align='right'>변화</th>"
+            head = (f"<tr><th align='left'>지표명</th><th align='right'>{_CURR}</th>"
+                    f"<th align='right'>{_PREV}</th><th align='right'>변화</th>"
                     "<th align='right'>변화율</th></tr>")
             body = ""
             for _, r in comp.iterrows():
@@ -681,7 +688,7 @@ for n, name, who in common.STEPS[3:]:
             f"<span style='color:#64748b;font-size:0.9em'>대상 기간 {ss.metrics_df['month'].iloc[0]}"
             f" · 카탈로그 {m_meta.get('생성일시', '?')}</span>", unsafe_allow_html=True)
 
-        signals = [x for x in v["항목"] if x["검증명"] == "전월 대비" and x["판정"] == "경고"]
+        signals = [x for x in v["항목"] if x["검증명"] == vd.MOM_CHECK and x["판정"] == "경고"]
         if signals:
             st.markdown("**이상 신호 " + str(len(signals)) + "건**")
             for x in signals:
@@ -723,8 +730,8 @@ for n, name, who in common.STEPS[3:]:
         # ── 전체 지표 표 ──────────────────────────────────────────────
         st.markdown("#### 전체 지표")
         amber, slate2 = common.STATUS["경고"][0], common.STATUS["정보"][0]
-        head = ("<tr><th align='left'>지표명</th><th align='right'>당월</th>"
-                "<th align='right'>전월</th><th align='right'>변화</th>"
+        head = (f"<tr><th align='left'>지표명</th><th align='right'>{_CURR}</th>"
+                f"<th align='right'>{_PREV}</th><th align='right'>변화</th>"
                 "<th align='right'>변화율</th><th align='right'>표본</th>"
                 "<th align='left'>상태</th></tr>")
         body = ""
@@ -758,7 +765,7 @@ for n, name, who in common.STEPS[3:]:
                      f"<td>{common.badge(r['status'])}</td></tr>")
         st.markdown(f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>",
                     unsafe_allow_html=True)
-        st.caption(f"옅은 주황 배경 = 전월 대비 변화율이 임계값 {config.MOM_THRESHOLD:g}% 이상인 행")
+        st.caption(f"옅은 주황 배경 = {_PREV} 대비 변화율이 임계값 {config.MOM_THRESHOLD:g}% 이상인 행")
 
         # 부분 갱신 안내
         if partial_names:

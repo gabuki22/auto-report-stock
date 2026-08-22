@@ -224,8 +224,16 @@ def _jsonable(o):
 
 
 def save(obj: dict, path: Path, wiki: Path) -> None:
+    """카탈로그를 저장한다.
+
+    ★ 원천 위키는 **폴더 이름만** 남긴다.
+      전체 경로를 적으면 사용자 홈 아래 경로가 그대로 들어가는데,
+      이 카탈로그는 공개 저장소에 커밋된다 — 사용자 이름과 폴더 구조가 노출된다.
+      추적에 필요한 것은 *"어느 위키에서 뽑았나"*이지 *"그 위키가 어느 드라이브에
+      있었나"*가 아니다.
+    """
     doc = {"_meta": {"생성일시": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
-                     "원천_위키": str(wiki), "항목수": len(obj)}, **obj}
+                     "원천_위키": wiki.name, "항목수": len(obj)}, **obj}
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2, default=_jsonable),
                     encoding="utf-8")
     print(f"  저장: {path.relative_to(config.BASE_DIR)}")

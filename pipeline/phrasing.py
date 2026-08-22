@@ -28,6 +28,14 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common  # noqa: E402
+import config  # noqa: E402
+
+# ★ 기간 이름은 config 한 곳에서. `_NO_PREV` 는 만드는 쪽(`fmt_change`)과
+#   읽는 쪽(`describe_change`)이 **같은 문자열**을 봐야 하므로 상수로 둔다 —
+#   각자 적으면 한쪽만 고쳤을 때 분기가 조용히 안 타게 된다.
+_PREV = getattr(config, "PREV_LABEL", "전월")
+_NO_PREV = f"{_PREV} 자료 없음"
+
 
 # ── 금지 표현 (Day3 개념 4절) ─────────────────────────────────────────
 # 앱은 사실과 변동만 쓴다. 아래는 **앱이 쓸 자격이 없는 말**이다.
@@ -136,7 +144,7 @@ def fmt_change(row) -> str:
     rate = row.get("상대변화율")
     if d is None or pd.isna(d):
         why = common.blank_safe(row.get("이유"))
-        return "전월 자료 없음 — 비교 불가" + (f" ({why})" if why else "")
+        return f"{_NO_PREV} — 비교 불가" + (f" ({why})" if why else "")
 
     rate_txt = "" if rate is None or pd.isna(rate) else f" ({rate:+.2f}%)"
     if d == 0:
@@ -217,13 +225,13 @@ def describe_change(row, threshold: float | None = None, basis: str = "") -> str
     name = row.get("지표명", row.get("metric_id", "지표"))
     j = josa(name)
     change = fmt_change(row)
-    if change.startswith("전월 자료 없음"):
+    if change.startswith(_NO_PREV):
         return f"{name}{j} {change}."
 
     rate = row.get("상대변화율")
     # "변화 없음"은 "…없음로"가 되어 조사가 붙지 않는다. 문장을 나눈다.
-    head = (f"{name}{j} 전월 대비 변화가 없다(0.00%)"
-            if change.startswith("변화 없음") else f"{name}{j} 전월 대비 {change}")
+    head = (f"{name}{j} {_PREV} 대비 변화가 없다(0.00%)"
+            if change.startswith("변화 없음") else f"{name}{j} {_PREV} 대비 {change}")
     if threshold is None or rate is None or pd.isna(rate):
         return head + "."
 

@@ -1,32 +1,35 @@
-# 월간 지표 리포트 — 2026-08-18
+# 주간 지표 리포트 — 2026-08-18
 
 | 항목 | 값 |
 |---|---|
-| 생성일시 | 2026-08-22T17:10:33+09:00 |
+| 생성일시 | 2026-08-22T20:20:20+09:00 |
 | 대상 기간 | 2026-08-18 |
 | 생성 도구 | auto-report |
-| 카탈로그 | 지표 30종 · 생성 2026-08-22T17:01:33+09:00 |
+| 카탈로그 | 지표 30종 · 생성 2026-08-22T20:18:42+09:00 |
 
 > **이 문서는 자동 생성되었으며 2·5·6장은 사람이 작성해야 합니다.**
 > 자동 생성된 장은 계산·검증 결과를 그대로 서술하며, 원인·제안·가치판단을 포함하지 않습니다.
 
-## 1. Executive Summary
+## 1. 한눈에 보기
 
-- **대상 기간**: 2026-08-18
-- **계산 지표**: 27종
+| 항목 | 값 |
+|---|---|
+| 대상 기간 | 2026-08-18 |
+| 계산 지표 | 27종 |
+| 검증 | 차단 0건 · 경고 18건 · 전체 경고 |
 
-**전월 대비 변동이 큰 지표**
+**임계값을 넘은 지표 5종**
 
-- 납기 초과 도번 수는 전월 대비 +80개 (+32.13%)로 임계값 10% (정의서)를 초과했다.
-- A/S품목 재고금액 (일반창고)는 전월 대비 -22,590,661원 (-5.36%)로 임계값 5% (정의서)를 초과했다.
-- A/S창고 재고금액은 전월 대비 -6,912,705원 (-3.34%)로 임계값 2% (정의서)를 초과했다.
-- 주간 총재고 수량은 전월 대비 -324,315개 (-3.25%)로 임계값 3% (정의서)를 초과했다.
-- 주간 총재고금액은 전월 대비 -49,689,164원 (-3.34%)로 임계값 3% (정의서)를 초과했다.
-
-- **검증**: 차단 0건, 경고 17건 (전체 판정 경고)
+| 지표 | 이번 주 | 전주 대비 | 임계값 |
+|---|---:|---:|---:|
+| 납기 초과 도번 수 | 329개 | +32.13% | 10% (정의서) |
+| A/S품목 재고금액 (일반창고) | 398,739,724원 | -5.36% | 5% (정의서) |
+| A/S창고 재고금액 | 200,336,074원 | -3.34% | 2% (정의서) |
+| 주간 총재고 수량 | 9,658,903개 | -3.25% | 3% (정의서) |
+| 주간 총재고금액 | 1,437,757,302원 | -3.34% | 3% (정의서) |
 
 > **핵심 시사점 — 이 소절은 사람이 작성합니다.**
-> 위 변동 중 무엇이 이번 달 의사결정에 중요한지. **무엇이 중요한가는 목표에 달렸고, 목표는 데이터에 없다.**
+> 위 변동 중 무엇이 이번 회차 의사결정에 중요한지. **무엇이 중요한가는 목표에 달렸고, 목표는 데이터에 없다.**
 
 ## 2. 배경·목적
 
@@ -54,7 +57,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 대상 파일 | stock_snapshot_2026-08-18.csv |
+| 대상 파일 | stock_snapshot_2026-08-18_수정본.csv |
 | 판정 테이블 | `stock_snapshot` |
 | 기간 | 2026-08-18 |
 | 행수 | 3,690 |
@@ -64,37 +67,39 @@
 
 지표 27종을 계산했다.
 
-| 지표 | metric_id | 산식 | 원천 | 정의서 유효구간 |
-|---|---|---|---|---|
-| A/S 수주 잔량 | `as_order_backlog` | SUM(order_summary.`AS잔량합`) | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| A/S 비중 | `as_share` | — | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| A/S 재고 대 실수요 배수 | `as_stock_coverage` | — | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 취소 수주 관련 재고금액 | `cancelled_order_stock` | SUM(CASE WHEN order_summary.`취소건수` > 0 THEN stock_snapshot.`총금액` ELSE 0 END) | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 수주 초과 재고금액 | `excess_stock_amount` | SUM(GREATEST(stock_snapshot.`총수량` - IFNULL(order_summary.`잔량합`, 0), 0) * IFNULL(stock_snapshot.`단가`, 0)) | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 수주 잔량 | `order_backlog_qty` | SUM(order_summary.`잔량합`) | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 수주 진행률 | `order_progress_rate` | — | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 납기 초과 도번 수 | `overdue_order_dobun` | COUNTIF(order_summary.`최근납기` < @end AND order_summary.`진행건수` > 0) | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 출하 계획 달성률 | `plan_achievement_stock` | — | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 사출 계획 달성률 | `plan_rate_injection` | — | stock_snapshot + worklog_weekly | 2026-05-27 ~ 2026-08-18 |
-| 검사 계획 달성률 | `plan_rate_inspect` | — | stock_snapshot + worklog_weekly | 2026-05-27 ~ 2026-08-18 |
-| 레이저 계획 달성률 | `plan_rate_laser` | — | stock_snapshot + worklog_weekly | 2026-05-27 ~ 2026-08-18 |
-| 도장 계획 달성률 | `plan_rate_paint` | — | stock_snapshot + worklog_weekly | 2026-05-27 ~ 2026-08-18 |
-| 인쇄 계획 달성률 | `plan_rate_print` | — | stock_snapshot + worklog_weekly | 2026-05-27 ~ 2026-08-18 |
-| 공정 간 달성률 격차 | `process_gap` | (GREATEST(SAFE_DIVIDE(SUM(worklog_weekly.`사출실적`), NULLIF(SUM(worklog_weekly.`사출계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`도장실적`), NULLIF(SUM(worklog_weekly.`도장계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`레이저실적`), NULLIF(SUM(worklog_weekly.`레이저계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`인쇄실적`), NULLIF(SUM(worklog_weekly.`인쇄계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`검사실적`), NULLIF(SUM(worklog_weekly.`검사계획`),0))) - LEAST(SAFE_DIVIDE(SUM(worklog_weekly.`사출실적`), NULLIF(SUM(worklog_weekly.`사출계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`도장실적`), NULLIF(SUM(worklog_weekly.`도장계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`레이저실적`), NULLIF(SUM(worklog_weekly.`레이저계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`인쇄실적`), NULLIF(SUM(worklog_weekly.`인쇄계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`검사실적`), NULLIF(SUM(worklog_weekly.`검사계획`),0)))) | stock_snapshot + worklog_weekly | 2026-05-27 ~ 2026-08-18 |
-| 원재료 재고 수량 | `raw_material_qty` | SUM(`원재료`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 무출하 재고금액 | `stagnant_stock_amount` | SUM(CASE WHEN `주간매출` = 0 AND TRIM(`등급`) <> '원재료' THEN `총금액` ELSE 0 END) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| A/S품목 재고금액 (일반창고) | `stock_as_item` | SUM(CASE WHEN TRIM(`등급`) = 'A/S' THEN `총금액` - `AS사출금액` - `AS완제품금액` - `원재료금액` END) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| A/S창고 재고금액 | `stock_as_warehouse` | SUM(`AS사출금액` + `AS완제품금액`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 공정창고 재고 수량 | `stock_gongjeong` | SUM(`공정창고`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 핸들링 재고금액 | `stock_handling` | SUM(CASE WHEN `등급` IS NOT NULL AND TRIM(`등급`) <> 'A/S' THEN `총금액` - `AS사출금액` - `AS완제품금액` - `원재료금액` END) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 재고 항등식 차이 | `stock_identity_gap` | SUM(`총금액` - `원재료금액` - `사출 총 금액` - `도장완료 금액` - `완제품 총금액`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 주간 총재고 수량 | `stock_qty_total` | SUM(`총수량`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 원재료 재고금액 | `stock_raw_material` | SUM(`원재료금액`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 재고 대 수주잔량 배수 | `stock_to_backlog_ratio` | — | order_summary + stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 주간 출하 수량 | `weekly_shipment_qty` | SUM(`주간매출`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
-| 주간 총재고금액 | `weekly_stock_amount` | SUM(`총금액`) | stock_snapshot | 2026-05-27 ~ 2026-08-18 |
+| 지표 | 원천 |
+|---|---|
+| A/S 수주 잔량 | order_summary + stock_snapshot |
+| A/S 비중 | stock_snapshot |
+| A/S 재고 대 실수요 배수 | order_summary + stock_snapshot |
+| 취소 수주 관련 재고금액 | order_summary + stock_snapshot |
+| 수주 초과 재고금액 | order_summary + stock_snapshot |
+| 수주 잔량 | order_summary + stock_snapshot |
+| 수주 진행률 | order_summary + stock_snapshot |
+| 납기 초과 도번 수 | order_summary + stock_snapshot |
+| 출하 계획 달성률 | stock_snapshot |
+| 사출 계획 달성률 | stock_snapshot + worklog_weekly |
+| 검사 계획 달성률 | stock_snapshot + worklog_weekly |
+| 레이저 계획 달성률 | stock_snapshot + worklog_weekly |
+| 도장 계획 달성률 | stock_snapshot + worklog_weekly |
+| 인쇄 계획 달성률 | stock_snapshot + worklog_weekly |
+| 공정 간 달성률 격차 | stock_snapshot + worklog_weekly |
+| 원재료 재고 수량 | stock_snapshot |
+| 무출하 재고금액 | stock_snapshot |
+| A/S품목 재고금액 (일반창고) | stock_snapshot |
+| A/S창고 재고금액 | stock_snapshot |
+| 공정창고 재고 수량 | stock_snapshot |
+| 핸들링 재고금액 | stock_snapshot |
+| 재고 항등식 차이 | stock_snapshot |
+| 주간 총재고 수량 | stock_snapshot |
+| 원재료 재고금액 | stock_snapshot |
+| 재고 대 수주잔량 배수 | order_summary + stock_snapshot |
+| 주간 출하 수량 | stock_snapshot |
+| 주간 총재고금액 | stock_snapshot |
 
-지표 정의는 위키 정의서에서 가져왔다 — 카탈로그 지표 30종, 생성일시 2026-08-22T17:01:33+09:00.
+모든 지표의 정의서 유효구간은 **2026-05-27 ~ 2026-08-18**로 같다.
+
+지표 정의는 위키 정의서에서 가져왔다 — 카탈로그 지표 30종, 생성일시 2026-08-22T20:18:42+09:00.
 
 ### 3-3. 부분 갱신
 
@@ -107,15 +112,9 @@
 
 ## 4. 현황
 
-2026-08-18 계산 결과와 전월 대비 변동이다. 증가·감소의 방향만 서술하며, 그것이 좋은 변화인지 나쁜 변화인지는 판단하지 않는다.
+2026-08-18 계산 결과와 전주 대비 변동이다. 증가·감소의 방향만 서술하며, 그것이 좋은 변화인지 나쁜 변화인지는 판단하지 않는다.
 
-- 납기 초과 도번 수는 전월 대비 +80개 (+32.13%)로 임계값 10% (정의서)를 초과했다.
-- A/S품목 재고금액 (일반창고)는 전월 대비 -22,590,661원 (-5.36%)로 임계값 5% (정의서)를 초과했다.
-- A/S창고 재고금액은 전월 대비 -6,912,705원 (-3.34%)로 임계값 2% (정의서)를 초과했다.
-- 주간 총재고 수량은 전월 대비 -324,315개 (-3.25%)로 임계값 3% (정의서)를 초과했다.
-- 주간 총재고금액은 전월 대비 -49,689,164원 (-3.34%)로 임계값 3% (정의서)를 초과했다.
-
-| 지표 | 당월 | 전월 | 전월 대비 |
+| 지표 | 이번 주 | 전주 | 전주 대비 |
 |---|---:|---:|---:|
 | A/S 수주 잔량 | 9,776,987개 | 9,776,987개 | +0.00% |
 | A/S 비중 | 41.7% | 42.3% | -1.40% (-0.6%p) |
@@ -145,7 +144,7 @@
 | 주간 출하 수량 | 429,558개 | 445,543개 | -3.59% |
 | 주간 총재고금액 | 1,437,757,302원 | 1,487,446,465원 | -3.34% |
 
-### 4-1. 전월 대비 변동이 큰 지표
+### 4-1. 전주 대비 변동이 큰 지표
 
 아래 5종은 **그 지표의 임계값**을 넘는 변동이 있었다. 임계값은 지표마다 다르며 정의서에서 가져온다.
 
@@ -194,7 +193,7 @@
 
 | 검증 | 결과 | 왜 |
 |---|---|---|
-| 전월 대비 | **통과**(−0.73%) | 병목이 **3주째**라 전주도 낮다. 변화율로는 안 보인다 |
+| 전주 대비 | **통과**(−0.73%) | 병목이 **3주째**라 전주도 낮다. 변화율로는 안 보인다 |
 | 정상 범위 | 경고 (61.73 vs 하한 61.75) | **간발의 차.** 병목 3주가 표본에 들어가 하한을 끌어내렸다 |
 | **공정 간 격차** | **32.8%p** | 같은 시점의 공정끼리 비교해 시계열 함정을 피한다 |
 
@@ -254,7 +253,7 @@ A/S 공급 의무 기간·최소 보유 정책이 기준인데 그 값이 어디
 ### 제안 2. 공정 간 격차를 주간 고정 항목으로
 
 이번 주 지표 27종 중 **격차(32.8%p)가 병목을 가장 분명히 가리켰다.**
-전월 대비는 통과했고 정상 범위는 간발의 차였다.
+전주 대비는 통과했고 정상 범위는 간발의 차였다.
 
 **총재고금액 옆에 격차를 나란히 놓는다.** 비용이 들지 않는다.
 정상 주차 격차가 8%p 안팎이므로 20%p를 잠정 기준으로 둔다 — 몇 주 운영하며 다시 정한다.
@@ -535,7 +534,39 @@ A/S 재고가 실수요의 0.39배인데 **그것이 적정한지 판단할 기�
 
 ## 8. 부록
 
-_(다음 단계에서 생성)_
+### 8-1. 지표 산식
+
+본문 3장에서 뺀 계산식이다. **결과를 다시 만들어 볼 사람을 위한 것**이고, 읽고 판단하는 데는 필요하지 않다.
+
+| 지표 | metric_id | 산식 |
+|---|---|---|
+| A/S 수주 잔량 | `as_order_backlog` | SUM(order_summary.`AS잔량합`) |
+| A/S 비중 | `as_share` | — |
+| A/S 재고 대 실수요 배수 | `as_stock_coverage` | — |
+| 취소 수주 관련 재고금액 | `cancelled_order_stock` | SUM(CASE WHEN order_summary.`취소건수` > 0 THEN stock_snapshot.`총금액` ELSE 0 END) |
+| 수주 초과 재고금액 | `excess_stock_amount` | SUM(GREATEST(stock_snapshot.`총수량` - IFNULL(order_summary.`잔량합`, 0), 0) * IFNULL(stock_snapshot.`단가`, 0)) |
+| 수주 잔량 | `order_backlog_qty` | SUM(order_summary.`잔량합`) |
+| 수주 진행률 | `order_progress_rate` | — |
+| 납기 초과 도번 수 | `overdue_order_dobun` | COUNTIF(order_summary.`최근납기` < @end AND order_summary.`진행건수` > 0) |
+| 출하 계획 달성률 | `plan_achievement_stock` | — |
+| 사출 계획 달성률 | `plan_rate_injection` | — |
+| 검사 계획 달성률 | `plan_rate_inspect` | — |
+| 레이저 계획 달성률 | `plan_rate_laser` | — |
+| 도장 계획 달성률 | `plan_rate_paint` | — |
+| 인쇄 계획 달성률 | `plan_rate_print` | — |
+| 공정 간 달성률 격차 | `process_gap` | (GREATEST(SAFE_DIVIDE(SUM(worklog_weekly.`사출실적`), NULLIF(SUM(worklog_weekly.`사출계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`도장실적`), NULLIF(SUM(worklog_weekly.`도장계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`레이저실적`), NULLIF(SUM(worklog_weekly.`레이저계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`인쇄실적`), NULLIF(SUM(worklog_weekly.`인쇄계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`검사실적`), NULLIF(SUM(worklog_weekly.`검사계획`),0))) - LEAST(SAFE_DIVIDE(SUM(worklog_weekly.`사출실적`), NULLIF(SUM(worklog_weekly.`사출계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`도장실적`), NULLIF(SUM(worklog_weekly.`도장계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`레이저실적`), NULLIF(SUM(worklog_weekly.`레이저계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`인쇄실적`), NULLIF(SUM(worklog_weekly.`인쇄계획`),0)), SAFE_DIVIDE(SUM(worklog_weekly.`검사실적`), NULLIF(SUM(worklog_weekly.`검사계획`),0)))) |
+| 원재료 재고 수량 | `raw_material_qty` | SUM(`원재료`) |
+| 무출하 재고금액 | `stagnant_stock_amount` | SUM(CASE WHEN `주간매출` = 0 AND TRIM(`등급`) <> '원재료' THEN `총금액` ELSE 0 END) |
+| A/S품목 재고금액 (일반창고) | `stock_as_item` | SUM(CASE WHEN TRIM(`등급`) = 'A/S' THEN `총금액` - `AS사출금액` - `AS완제품금액` - `원재료금액` END) |
+| A/S창고 재고금액 | `stock_as_warehouse` | SUM(`AS사출금액` + `AS완제품금액`) |
+| 공정창고 재고 수량 | `stock_gongjeong` | SUM(`공정창고`) |
+| 핸들링 재고금액 | `stock_handling` | SUM(CASE WHEN `등급` IS NOT NULL AND TRIM(`등급`) <> 'A/S' THEN `총금액` - `AS사출금액` - `AS완제품금액` - `원재료금액` END) |
+| 재고 항등식 차이 | `stock_identity_gap` | SUM(`총금액` - `원재료금액` - `사출 총 금액` - `도장완료 금액` - `완제품 총금액`) |
+| 주간 총재고 수량 | `stock_qty_total` | SUM(`총수량`) |
+| 원재료 재고금액 | `stock_raw_material` | SUM(`원재료금액`) |
+| 재고 대 수주잔량 배수 | `stock_to_backlog_ratio` | — |
+| 주간 출하 수량 | `weekly_shipment_qty` | SUM(`주간매출`) |
+| 주간 총재고금액 | `weekly_stock_amount` | SUM(`총금액`) |
 
 ---
 

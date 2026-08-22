@@ -3,7 +3,9 @@
 # 접속자가 사이드바에서 불러와 1~8단계 전 과정을 볼 수 있게 하기 위해서다
 # (BigQuery 인증 없이도 5~8단계는 동작한다).
 outputs/run_*/
-!outputs/run_20260822_1707/
+# ★ 배포본에서 **화면으로 확인할 수 있는 확정 실행 하나**는 저장소에 담는다.
+#   자격증명이 없는 곳에서도 1~8단계 전 과정을 그대로 볼 수 있어야 하기 때문이다.
+!outputs/run_20260822_2019/
 
 __pycache__/
 .streamlit/secrets.toml
@@ -13,10 +15,18 @@ __pycache__/
 # 배포본에는 확정 실행 폴더 안의 원본 사본이 이미 들어 있다.
 _data/
 
-# 폰트는 저장소에 넣지 않는다(합 11.8MB).
-# `py -X utf8 dev_tools/get_fonts.py` 로 언제든 다시 받는다.
+# 폰트 — ★ **서브셋은 저장소에 넣는다.**
+#   배포본(Streamlit Cloud)에 폰트가 없으면 PDF 를 만들지 못하고,
+#   받는 사람은 "한글 폰트 없음"만 보게 된다.
+#   Noto Sans KR 은 SIL Open Font License 라 재배포가 허용된다.
+#   원본(합 11.8MB)은 넣지 않는다 — 대부분이 한자다.
+#   `py -X utf8 dev_tools/get_fonts.py` 로 받아 `subset_fonts.py` 로 다시 만든다.
 fonts/*.ttf
+!fonts/*-subset.ttf
 fonts/_font_test.pdf
 
 # 강의 CS 카탈로그 백업 — 이 프로젝트와 무관
 catalog/_cs_backup/
+
+# 금지어 목록 — **이 목록 자체가 공개되면 안 된다**(dev_tools/publish_scan.py)
+.publish_deny.txt

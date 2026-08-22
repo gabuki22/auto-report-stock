@@ -13,6 +13,13 @@ import pandas as pd
 
 import config
 
+# ★ 기간 이름은 config 한 곳에서 온다 — 화면·이메일·리포트가 같은 말을 쓰게 한다.
+#   ⚠️ 이것은 **표시 문자열**이다. `r["당월"]`·`c.get("전월")`은 DataFrame
+#      컬럼 키이므로 바꾸면 안 된다 — 표시와 키를 한꺼번에 치환하면 조용히 깨진다.
+_PERIOD = getattr(config, "PERIOD_LABEL", "월간")
+_PREV = getattr(config, "PREV_LABEL", "전월")
+_CURR = getattr(config, "CURR_LABEL", "당월")
+
 # 상태 → (색, 라벨). CLAUDE.md 7절 대응
 STATUS = {
     "통과":   ("#10b981", "emerald"),
@@ -343,7 +350,7 @@ def result_files(run_dir, key: str = "") -> None:
 
     d = _P(run_dir)
     specs = [("metrics.csv", "계산 결과", "text/csv"),
-             ("comparison.csv", "전월 대비", "text/csv"),
+             ("comparison.csv", f"{_PREV} 대비", "text/csv"),
              ("validation.json", "검증 결과", "application/json"),
              ("run_log.json", "실행 기록", "application/json")]
     have = [(n, label, mime) for n, label, mime in specs if (d / n).exists()]

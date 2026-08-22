@@ -29,6 +29,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common  # noqa: E402
 import config  # noqa: E402
+import config  # noqa: E402
 from pipeline import phrasing as ph  # noqa: E402
 from pipeline import report as rp  # noqa: E402
 
@@ -110,7 +111,11 @@ def attachments(run_dir, only_existing: bool = True) -> list[dict]:
         p = d / name
         exists = p.exists()
         if exists or not only_existing:
-            out.append({"filename": name, "path": str(p), "존재": exists,
+            # ★ 경로는 **실행 폴더 기준 상대경로**로 남긴다.
+            #   절대 경로를 적으면 사용자 홈 아래 경로가 `email_meta.json`에 박히고,
+            #   그 파일은 공개 저장소에 커밋된다 — 사용자 이름과 폴더 구조가 새어 나간다.
+            #   8주차에 SMTP를 꽂을 때도 실행 폴더를 기준으로 열면 되므로 손해가 없다.
+            out.append({"filename": name, "path": f"{d.name}/{name}", "존재": exists,
                         "size": p.stat().st_size if exists else 0})
     return out
 
@@ -119,7 +124,7 @@ def body_text(ctx: dict, report_md: str) -> str:
     """HTML을 지원하지 않는 클라이언트용 본문. **같은 재료로 같은 순서.**"""
     v = ctx.get("validation") or {}
     todo = unwritten(report_md)
-    L = [f"{ctx.get('기간', '')} 월간 지표 리포트",
+    L = [f"{ctx.get('기간', '')} {getattr(config, 'PERIOD_LABEL', '월간')} 지표 리포트",
          f"생성일시 {ctx.get('생성일시', '—')}", ""]
 
     L += ["[핵심 지표]"]

@@ -18,8 +18,13 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import config  # noqa: E402
 import common  # noqa: E402
+import config  # noqa: E402
+
+# ★ 이 문자열은 **화면에 보이는 이름이자 조회 키**다(report.py·app.py가 이 값으로
+#   경고를 골라낸다). 두 곳에 따로 적으면 한쪽만 고쳤을 때 조용히 0건이 된다.
+MOM_CHECK = f'{getattr(config, "PREV_LABEL", "전월")} 대비'
+
 
 # 자동으로 하지 않는 검증 — 반드시 함께 내보낸다
 # ⚠️ 문구에 "필요하다·해야 한다"를 쓰지 않는다. 자동화하지 않은 **이유를 적는 자리**이지
@@ -175,21 +180,21 @@ def check_month_over_month(comparison_df: pd.DataFrame, catalog: dict | None = N
     """
     out = []
     if comparison_df is None or not len(comparison_df):
-        return [_r("전월 대비", "전체", "통과", "비교 데이터 없음")]
+        return [_r(MOM_CHECK, "전체", "통과", "비교 데이터 없음")]
 
     for _, r in comparison_df.iterrows():
         mid = r.get("metric_id")
         th, src = threshold_of(mid, catalog, default_threshold)
         if str(r.get("비교상태", "")) != "비교 가능":
             # 비교를 못 했으면 임계값이 적용된 바 없다 — 기준 열을 비워 둔다
-            out.append(_r("전월 대비", r["지표명"], "정보",
+            out.append(_r(MOM_CHECK, r["지표명"], "정보",
                           f"비교 불가 — {r.get('이유', '')}"))
             continue
         rate = _num(r.get("상대변화율"))
         if rate is None:
             continue
         over = abs(rate) >= th
-        out.append(_r("전월 대비", r["지표명"], "경고" if over else "통과",
+        out.append(_r(MOM_CHECK, r["지표명"], "경고" if over else "통과",
                       f"전월 대비 {rate:+.1f}% — 임계값 {th:g}% "
                       f"{'이상' if over else '미만'}", rate,
                       기준=f"{th:g}% ({src})"))

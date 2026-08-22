@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
 """앱 설정 — 경로·BigQuery·기준값.
 
-★ WIKI_PATH를 직접 지정하려면 아래 _MANUAL_WIKI_PATH 한 줄만 고치면 된다.
-    _MANUAL_WIKI_PATH = r"C:\여기에\본인\위키\경로"
-  r"..." 로 쓰는 이유: 윈도우 백슬래시를 그대로 두기 위해서다(\n, \t 오해석 방지).
-  경로에 한글이나 공백이 있어도 r"..." 안에서는 문제없다.
+★ 위키 경로는 **소스에 박지 않는다.** 개인 PC 경로에는 사용자 이름과 폴더 구조가
+  그대로 담기는데 이 저장소는 공개된다. 아래 순서로 찾는다.
 
-  설정층·실행층 분리의 요점이 여기다 — 위키를 바꾸려면 **이 한 줄만** 바꾸고
+    1) 환경변수 `AUTO_REPORT_WIKI`
+    2) 같은 폴더의 `wiki_path.txt` 한 줄   ← 가장 간편. `.gitignore`로 제외된다
+    3) 형제 폴더 자동 탐색(`_find_wiki`)
+
+  2번을 쓰려면 `wiki_path.txt`를 만들고 경로만 한 줄 적는다. 파일에서 읽으므로
+  백슬래시·한글·공백을 이스케이프 없이 그대로 쓴다.
+
+  설정층·실행층 분리의 요점이 여기다 — 위키를 바꾸려면 **그 한 줄만** 바꾸고
   export를 다시 돌린다. 앱 코드는 건드리지 않는다.
+  ※ 배포본에는 이 경로가 없어도 된다. 앱은 `catalog/*.json` 스냅샷만 읽는다.
 """
+import os
 from pathlib import Path
 
 # ── 경로 ──────────────────────────────────────────────────────────────
@@ -18,8 +25,26 @@ PIPELINE_DIR = BASE_DIR / "pipeline"
 OUTPUTS_DIR = BASE_DIR / "outputs"
 FONTS_DIR = BASE_DIR / "fonts"
 
-# 직접 지정하려면 여기에. None이면 아래 자동 탐색을 쓴다.
-_MANUAL_WIKI_PATH = r"C:/Users/당근/Desktop/L-wiki/raw/학습/EDATA7기_이기쁨"
+def _manual_wiki() -> str | None:
+    """개인 위키 경로 — 환경변수 → 로컬 파일 순. 없으면 None(자동 탐색으로 넘어간다).
+
+    ★ 여기에 경로를 **적어 두지 않는다.** 공개 저장소에 개인 PC 경로가 남는다.
+      자동 탐색만으로는 부족하다 — 형제 폴더에 교안 위키와 우리 위키가 함께 있으면
+      엉뚱한 쪽을 고른다(실측: `my-wiki-02`가 잡혔다). 그래서 사람이 한 줄 적는
+      자리를 **저장소 밖에** 둔다.
+    """
+    if env := os.environ.get("AUTO_REPORT_WIKI"):
+        return env.strip()
+    f = BASE_DIR / "wiki_path.txt"
+    if f.exists():
+        for line in f.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                return line
+    return None
+
+
+_MANUAL_WIKI_PATH = _manual_wiki()
 
 # 지표 정의서 폴더 이름 후보 — 교안은 06_metrics, 우리 위키는 07_metrics
 _METRICS_DIR_NAMES = ("06_metrics", "07_metrics")
@@ -116,6 +141,13 @@ APP_TITLE = "주간 재고 리포트 자동화"
 REPORT_SUBJECT = "재고 지표 리포트"      # 이메일 제목에 들어가는 본문
 
 EMAIL_SUBJECT_PREFIX = "[주간]"
+
+# ★ 기간을 부르는 이름. **코드에 '월간'·'전월'을 박지 않는다.**
+#   주간 보고인데 리포트 표지에 "월간 지표 리포트"가 찍히고 표 머리가 "전월"이었다.
+#   숫자는 맞는데 이름이 틀리면 읽는 사람이 먼저 그 어긋남을 본다.
+PERIOD_LABEL = "주간"        # 리포트 표지·이메일 제목 (월간 프로젝트면 "월간")
+PREV_LABEL = "전주"          # 비교 대상 (월간 프로젝트면 "전월")
+CURR_LABEL = "이번 주"       # 비교표의 당기 열 (월간 프로젝트면 "당월")
 
 # 첨부 목록. **파일명만 적고 실제 첨부는 하지 않는다**(8주차 범위).
 # 없는 파일은 목록에서 빠지고, 빠졌다는 사실이 화면에 보인다.

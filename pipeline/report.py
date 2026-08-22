@@ -33,8 +33,16 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common  # noqa: E402
+import config  # noqa: E402
 from pipeline import phrasing as ph  # noqa: E402
 from pipeline import profile as pf  # noqa: E402
+from pipeline import validate as vd  # noqa: E402
+
+# ★ 기간을 부르는 이름은 **config 한 곳**에서 온다. 코드에 "월간"·"전월"을 박으면
+#   주간 프로젝트로 이식했을 때 표지와 표 머리가 사실과 어긋난 채 남는다.
+_PERIOD = getattr(config, "PERIOD_LABEL", "월간")
+_PREV = getattr(config, "PREV_LABEL", "전월")
+_CURR = getattr(config, "CURR_LABEL", "당월")
 
 # 지표 하나에 인용할 인사이트 상한. tags 교집합은 흔한 태그 하나로도 걸려서
 # ("이탈분석" 하나에 5건) 5장이 목록으로 뒤덮인다. 자를 때는 **몇 건을 줄였는지 밝힌다.**
@@ -112,7 +120,7 @@ def _mom_flagged(ctx) -> list[dict]:
     """
     v = ctx.get("validation") or {}
     return [x for x in v.get("항목", [])
-            if x.get("검증명") == "전월 대비" and x.get("판정") == "경고"]
+            if x.get("검증명") == vd.MOM_CHECK and x.get("판정") == "경고"]
 
 
 def _flag_sentences(ctx) -> list[str]:
@@ -137,6 +145,33 @@ def _flag_sentences(ctx) -> list[str]:
     return out
 
 
+def _flag_rows(ctx) -> list[list[str]]:
+    """임계값을 넘은 지표를 **표 행으로**. `_flag_sentences`와 같은 재료를 쓴다.
+
+    ★ 재료가 갈라지면 요약표와 본문 문장이 어긋난다 — 표엔 5종인데 문장엔 4종이
+      적히는 식이다. 그래서 고르는 일(`_mom_flagged`)은 한 곳에 두고
+      **모양만** 이 함수와 `_flag_sentences`가 각각 맡는다.
+    """
+    comp = ctx.get("comparison")
+    if comp is None or not len(comp):
+        return []
+    m = ctx["metrics"]
+    mmap = {r["metric_id"]: r for _, r in m.iterrows()}
+    cmap = {r["지표명"]: r for _, r in comp.iterrows()}
+
+    rows = []
+    for x in _mom_flagged(ctx):
+        r = cmap.get(x["대상지표"])
+        if r is None:
+            continue
+        base = mmap.get(r["metric_id"], r)
+        cur = ph.fmt_value(r.get("당월"), base.get("유형", ""), r["지표명"],
+                           r["metric_id"], base.get("단위", ""))
+        basis = common.blank_safe(x.get("기준"))          # 예: "5% (정의서)"
+        rows.append([r["지표명"], cur, _rate_text(r), basis or "—"])
+    return rows
+
+
 # ── 머리말 ────────────────────────────────────────────────────────────
 def header(ctx) -> str:
     period = ctx.get("기간", "?")
@@ -149,7 +184,7 @@ def header(ctx) -> str:
                     f"생성 {meta.get('생성일시', '?')}"],
     ]
     return ("\n".join([
-        f"# 월간 지표 리포트 — {period}",
+        f"# {_PERIOD} 지표 리포트 — {period}",
         "",
         _table(["항목", "값"], rows),
         "",
@@ -171,22 +206,29 @@ def section_1_summary(ctx) -> str:
     v = ctx.get("validation") or {}
     n_dep = int((m["포함사유"] != "").sum()) if "포함사유" in m else 0
 
-    lines = ["## 1. Executive Summary", "",
-             f"- **대상 기간**: {ctx.get('기간', '—')}",
-             f"- **계산 지표**: {len(m) - n_dep}종"
-             + (f" (의존 지표 {n_dep}종 포함 {len(m)}종 계산)" if n_dep else ""),
-             "", "**전월 대비 변동이 큰 지표**", ""]
+    lines = ["## 1. 한눈에 보기", "",
+             # 머리행을 비우면 **첫 데이터 줄이 머리처럼 굵게** 나온다(PDF 실측).
+             _table(["항목", "값"],
+                    [["대상 기간", str(ctx.get("기간", "—"))],
+                     ["계산 지표", f"{len(m) - n_dep}종"
+                      + (f" (의존 계산 {n_dep}종 포함 {len(m)}종)" if n_dep else "")],
+                     ["검증", f"차단 {v.get('차단수', 0)}건 · 경고 {v.get('경고수', 0)}건"
+                      f" · 전체 {v.get('전체판정', '—')}"]]),
+             ""]
 
-    flags = _flag_sentences(ctx)
-    lines += [f"- {s}" for s in flags] if flags else \
-             ["- 임계값을 넘는 변동이 있는 지표가 없다."]
+    # ★ **문장 나열 대신 표.** 예전에는 "…는 전월 대비 +80개(+32.13%)로 임계값 10%
+    #   (정의서)를 초과했다" 같은 문장이 다섯 줄 이어졌다. 다 읽어야 무엇이 큰지
+    #   알 수 있어, 가장 먼저 읽히는 자리에서 가장 느리게 읽혔다.
+    #   숫자를 세로로 세우면 **큰 것이 눈에 먼저 들어온다.**
+    rows = _flag_rows(ctx)
+    if rows:
+        lines += [f"**임계값을 넘은 지표 {len(rows)}종**", "",
+                  _table(["지표", _CURR, f"{_PREV} 대비", "임계값"], rows, "lrrr"), ""]
+    else:
+        lines += ["임계값을 넘는 변동이 있는 지표가 없다.", ""]
 
-    lines += ["",
-              f"- **검증**: 차단 {v.get('차단수', 0)}건, 경고 {v.get('경고수', 0)}건"
-              f" (전체 판정 {v.get('전체판정', '—')})",
-              "",
-              f"> **핵심 시사점 — {PLACEHOLDER_SUB}.**",
-              "> 위 변동 중 무엇이 이번 달 의사결정에 중요한지. "
+    lines += [f"> **핵심 시사점 — {PLACEHOLDER_SUB}.**",
+              "> 위 변동 중 무엇이 이번 회차 의사결정에 중요한지. "
               "**무엇이 중요한가는 목표에 달렸고, 목표는 데이터에 없다.**"]
     return "\n".join(lines)
 
@@ -238,7 +280,24 @@ def section_3_method(ctx) -> str:
             " + ".join(sorted(pf._sources(spec, cat))) or "—",
             common.blank_safe(spec.get("유효구간")) or "—",
         ])
-    defs = _table(["지표", "metric_id", "산식", "원천", "정의서 유효구간"], rows)
+    # ★ **산식(SQL)을 본문에서 뺀다.**
+    #   27종 × SQL 이 본문 한가운데 3쪽을 먹었다. 이 리포트를 읽는 사람은
+    #   생산관리와 임원이고, 그들이 여기서 답을 얻는 질문은 *"무엇을 무엇으로 쟀나"*이지
+    #   *"어떤 SQL 을 돌렸나"*가 아니다.
+    #   ★ 그렇다고 **버리지는 않는다** — 재현할 수 있어야 하므로 부록으로 옮긴다.
+    #   같은 `rows` 를 잘라 쓰므로 본문과 부록이 어긋날 수 없다.
+    # 유효구간이 **전부 같으면 열을 없애고 한 줄로 적는다.**
+    #   27줄에 같은 날짜가 반복되면 읽는 사람은 그 열을 눈으로 건너뛰게 되고,
+    #   정말 다른 값이 하나 섞여도 못 본다. 같을 때 접어 두면 **다를 때만 보인다.**
+    spans = {r[4] for r in rows}
+    if len(spans) == 1:
+        defs = "\n".join([_table(["지표", "원천"], [[r[0], r[3]] for r in rows]), "",
+                          f"모든 지표의 정의서 유효구간은 **{spans.pop()}**로 같다."])
+    else:
+        defs = _table(["지표", "원천", "정의서 유효구간"],
+                      [[r[0], r[3], r[4]] for r in rows])
+    ctx["_산식표"] = _table(["지표", "metric_id", "산식"],
+                          [[r[0], r[1], r[2]] for r in rows])
 
     n_dep = int((m["포함사유"] != "").sum()) if "포함사유" in m else 0
     lines = [
@@ -296,20 +355,19 @@ def section_4_status(ctx) -> str:
         rows.append([r["지표명"], cur, prv, rate])
 
     lines = ["## 4. 현황", "",
-             f"{ctx.get('기간', '')} 계산 결과와 전월 대비 변동이다. "
+             f"{ctx.get('기간', '')} 계산 결과와 {_PREV} 대비 변동이다. "
              "증가·감소의 방향만 서술하며, 그것이 좋은 변화인지 나쁜 변화인지는 판단하지 않는다.",
              ""]
 
-    # 표 위 요약 — **임계값을 넘은 지표만.** 전체를 다 서술하면 요약이 아니라 표를
-    # 문장으로 옮긴 것이 되고, 읽는 사람은 그중 무엇을 봐야 할지 알 수 없다.
-    flags = _flag_sentences(ctx)
-    if flags:
-        lines += [f"- {s}" for s in flags] + [""]
+    # ★ 여기 있던 문장 목록을 **뺐다.** 같은 5종이 1장 표 · 이 문장들 · 4-1 표로
+    #   세 번 나왔다. 세 번 읽어도 새로 아는 것이 없으면 그것은 요약이 아니라 반복이다.
+    #   (문장 형태는 `_flag_sentences`로 남아 있고 **이메일 본문**이 쓴다 —
+    #    메일은 표를 접기 어려워 문장이 낫다.)
 
-    lines += [_table(["지표", "당월", "전월", "전월 대비"], rows, "lrrr")]
+    lines += [_table(["지표", _CURR, _PREV, f"{_PREV} 대비"], rows, "lrrr")]
 
     flagged = _mom_flagged(ctx)
-    lines += ["", "### 4-1. 전월 대비 변동이 큰 지표", ""]
+    lines += ["", f"### 4-1. {_PREV} 대비 변동이 큰 지표", ""]
     if flagged:
         lines += [f"아래 {len(flagged)}종은 **그 지표의 임계값**을 넘는 변동이 있었다. "
                   "임계값은 지표마다 다르며 정의서에서 가져온다.", "",
@@ -650,7 +708,23 @@ def section_7_limits(ctx) -> str:
 
 
 def section_8_appendix(ctx) -> str:
-    return "## 8. 부록\n\n_(다음 단계에서 생성)_"
+    """본문에서 뺀 것을 담는 자리 — **버리는 것과 옮기는 것은 다르다.**
+
+    산식(SQL)은 27종이 본문 한가운데 3쪽을 먹었다. 이 리포트를 읽는 사람은
+    생산관리와 임원이고, 그들이 여기서 답을 얻는 질문은 *"무엇을 무엇으로 쟀나"*이지
+    *"어떤 SQL을 돌렸나"*가 아니다. 그렇다고 지우면 **결과를 다시 만들어 볼 수 없다.**
+
+    ★ 재료가 없으면 소절을 만들지 않는다(7장 한계 절과 같은 규칙).
+    """
+    lines = ["## 8. 부록", ""]
+    if ctx.get("_산식표"):
+        lines += ["### 8-1. 지표 산식", "",
+                  "본문 3장에서 뺀 계산식이다. **결과를 다시 만들어 볼 사람을 위한 것**이고, "
+                  "읽고 판단하는 데는 필요하지 않다.", "",
+                  ctx["_산식표"]]
+    else:
+        lines += ["_담을 내용이 없다._"]
+    return "\n".join(lines)
 
 
 def split_sections(md: str) -> list[dict]:

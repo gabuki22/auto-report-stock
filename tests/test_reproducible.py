@@ -77,8 +77,30 @@ def find_time_calls(src: str) -> list[tuple[int, str]]:
 
 # ── 공용 ──────────────────────────────────────────────────────────────
 def _latest_runs(n: int = 2) -> list[Path]:
-    runs = sorted((BASE / "outputs").glob("run_*"), reverse=True)
-    return [r for r in runs if (r / "metrics.csv").exists()][:n]
+    """★ **같은 입력 파일로 돌린** 실행만 모은다.
+
+    예전에는 그냥 최근 n개를 집었다. 그러면 다른 파일로 돌린 실행이 섞여
+    **재현성 실패가 아닌 것을 실패로 부른다** — 실제로 원본(항등식 어긋남)과
+    수정본을 나란히 비교해 27종 전부 "값이 다르다"가 나왔다.
+
+    재현성은 *"같은 입력이면 같은 출력"*이므로, 입력이 다르면 애초에 비교 대상이
+    아니다. 검사기를 무디게 하는 것이 아니라 **범위를 옳게 잡는 것**이다.
+    """
+    def _input_of(r: Path) -> str:
+        try:
+            return str(rl.field(rl.load(r), "파일명") or "")
+        except Exception:                                    # noqa: BLE001
+            return ""
+
+    runs = [r for r in sorted((BASE / "outputs").glob("run_*"), reverse=True)
+            if (r / "metrics.csv").exists() and (r / "run_log.json").exists()]
+    if not runs:
+        return []
+    # 가장 최근 실행의 입력이 기준 — 지금 작업 중인 파일이다
+    target = _input_of(runs[0])
+    if not target:
+        return runs[:n]
+    return [r for r in runs if _input_of(r) == target][:n]
 
 
 def _load_ctx(run: Path) -> dict:

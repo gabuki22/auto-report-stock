@@ -24,6 +24,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common  # noqa: E402
+import config  # noqa: E402
+
+# ★ 기간 이름은 config 한 곳에서 온다 — 화면·이메일·리포트가 같은 말을 쓰게 한다.
+#   ⚠️ 이것은 **표시 문자열**이다. `r["당월"]`·`c.get("전월")`은 DataFrame
+#      컬럼 키이므로 바꾸면 안 된다 — 표시와 키를 한꺼번에 치환하면 조용히 깨진다.
+_PERIOD = getattr(config, "PERIOD_LABEL", "월간")
+_PREV = getattr(config, "PREV_LABEL", "전월")
+_CURR = getattr(config, "CURR_LABEL", "당월")
 
 # 이메일 표준 폭. 이보다 넓으면 모바일 클라이언트에서 가로 스크롤이 생긴다.
 WIDTH = 600
@@ -76,8 +84,8 @@ def _metrics_table(rows: list[dict]) -> str:
     head = "".join(
         f'<th style="text-align:{a};padding:7px 10px;font-size:12px;color:{MUTED};'
         f'background:{HEAD_BG};border-bottom:1px solid {LINE}">{h}</th>'
-        for h, a in (("지표", "left"), ("당월", "right"),
-                     ("전월", "right"), ("변화", "right")))
+        for h, a in (("지표", "left"), (_CURR, "right"),
+                     (_PREV, "right"), ("변화", "right")))
     body = ""
     for r in rows:
         body += (
@@ -109,7 +117,7 @@ def render(ctx: dict, report_md: str) -> str:
     rows = [_section("핵심 지표", _metrics_table(ed.key_metrics(ctx)))]
 
     flags = ed.flagged(ctx)
-    rows.append(_section("전월 대비 변동이 큰 지표",
+    rows.append(_section(f"{_PREV} 대비 변동이 큰 지표",
                          _list(flags or ["임계값을 넘는 변동이 있는 지표가 없다."],
                                _color("경고") if flags else MUTED)))
 
@@ -145,7 +153,7 @@ def render(ctx: dict, report_md: str) -> str:
 
   <tr><td style="background:{HEAD_BG};padding:18px 24px;border-radius:8px 8px 0 0">
     <div style="font-size:17px;font-weight:bold;color:{INK}">
-      월간 지표 리포트 &mdash; {_esc(period)}</div>
+      {_PERIOD} 지표 리포트 &mdash; {_esc(period)}</div>
     <div style="font-size:12px;color:{MUTED};padding-top:4px">
       생성일시 {_esc(ctx.get('생성일시', '—'))}</div>
   </td></tr>
