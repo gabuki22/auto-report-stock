@@ -42,6 +42,26 @@ st.set_page_config(page_title=config.APP_TITLE, layout="wide")
 theme.inject(st)
 
 
+SUB_TITLE = getattr(rp, "SUB_TITLE", "핵심 시사점")
+
+
+def unwritten_here(secs: list[dict]) -> tuple[list, list]:
+    """미작성 (장, 소절) — **app.py 안에서 직접 센다.**
+
+    ★ 하위 모듈에 새로 만든 이름을 app.py 가 부르면 배포본에서 죽는다.
+      Streamlit Cloud 는 `app.py` 는 매번 다시 읽지만 이미 import 된 하위 모듈은
+      **옛 버전을 붙들고** 있어서, 새 이름이 아직 없다며 AttributeError 를 낸다.
+      이 함정에 **두 번** 빠졌다 — `vd.MOM_CHECK`, `rp.unwritten`.
+
+      그래서 여기서는 **옛 버전에도 반드시 있는 것만** 쓴다:
+      `split_sections`가 채우는 `미작성` 키와, 오래된 상수 `PLACEHOLDER_SUB`.
+      소절은 플래그를 믿지 않고 본문에서 직접 찾는다 — 그 플래그도 새것이다.
+    """
+    ph_sub = getattr(rp, "PLACEHOLDER_SUB", "\0")
+    return ([s for s in secs if s.get("미작성")],
+            [s for s in secs if ph_sub in (s.get("본문") or "")])
+
+
 def badge(text: str, kind: str | None = None) -> str:
     """화면용 배지 — **어두운 바탕에 맞춘 톤**.
 
@@ -170,7 +190,11 @@ with st.sidebar:
     else:
         st.markdown(f"- 지표 **{len(metrics)}종**\n- 테이블 **{len(schema)}종**")
         st.caption(f"생성 {m_meta.get('생성일시', '?')}")
-        st.caption(f"위키 {config.WIKI_PATH.name if config.WIKI_PATH else '미지정'}")
+        # ★ 배포본에는 위키 경로가 **없는 것이 정상**이다(개인 PC 경로라 저장소에 안 넣는다).
+        #   그런데 "미지정"이라고만 쓰면 결함처럼 보인다 — 앱은 카탈로그만 읽으므로
+        #   경로가 없어도 아무 문제가 없다. **없어도 되는 것과 빠진 것을 구분해서** 쓴다.
+        st.caption(f"위키 {config.WIKI_PATH.name}" if config.WIKI_PATH
+                   else "정의 원천 카탈로그 (위키 경로는 카탈로그를 다시 뽑을 때만 필요)")
 
     # ★ 이 두 칸은 **지금 채우지 않는다.** 사이드바는 스크립트 맨 위에서 그려지는데
     #   계산·검증은 아래에서 일어나므로, 여기서 값을 읽으면 **한 박자 전 상태**가 찍힌다
@@ -1008,8 +1032,7 @@ for n, name, who in common.STEPS[3:]:
 
         if ss.report_md:
             secs = rp.split_sections(ss.report_md)
-            # 장과 소절을 함께 — 소절(1장 핵심 시사점)이 빠져 빈칸이 확정된 적이 있다
-            todo, subs = rp.unwritten(secs)
+            todo, subs = unwritten_here(secs)
 
             # 1. 생성 정보 — 어느 정의로 만든 문서인지 나중에 추적할 수 있어야 한다
             log = json.loads((Path(ss.run_dir) / "run_log.json").read_text(encoding="utf-8"))
@@ -1021,7 +1044,7 @@ for n, name, who in common.STEPS[3:]:
             # 2. 미작성 경고 — 숫자만 있는 문서가 완결된 분석으로 오해되지 않게
             if todo or subs:
                 _d = ([f"{s['번호']}장 {s['제목']}" for s in todo]
-                      + [f"**{s['번호']}장 {rp.SUB_TITLE}**" for s in subs])
+                      + [f"**{s['번호']}장 {SUB_TITLE}**" for s in subs])
                 st.warning("**미작성 " + f"{len(todo) + len(subs)}건** — " + " · ".join(_d)
                            + ". 사람이 작성해야 합니다 — "
                            + f"`{ms.MANUAL_PATH.name}` 를 채우고 다시 생성하세요.")
@@ -1157,7 +1180,8 @@ for n, name, who in common.STEPS[3:]:
 
         if ss.email:
             mail = ss.email
-            todo = ed.unwritten(ss.report_md)
+            _t, _s = unwritten_here(rp.split_sections(ss.report_md))
+            todo = _t + [{**x, "제목": SUB_TITLE} for x in _s]
 
             # 1. 상태 경고 — 제목에 왜 꼬리표가 붙었는지 화면에서 설명한다
             if todo:
@@ -1264,7 +1288,8 @@ for n, name, who in common.STEPS[3:]:
             continue
 
         mail = ss.email
-        todo8 = ed.unwritten(ss.report_md)
+        _t8, _s8 = unwritten_here(rp.split_sections(ss.report_md))
+        todo8 = _t8 + [{**x, "제목": SUB_TITLE} for x in _s8]
         at8 = ed.attachments(ss.run_dir, only_existing=False)
         checklist = common.build_send_checklist(
             {**mail, "기간": str(ss.metrics_df["month"].iloc[0])}, v, todo8, at8)
