@@ -36,7 +36,6 @@ import common  # noqa: E402
 import config  # noqa: E402
 from pipeline import phrasing as ph  # noqa: E402
 from pipeline import profile as pf  # noqa: E402
-from pipeline import validate as vd  # noqa: E402
 
 # ★ 기간을 부르는 이름은 **config 한 곳**에서 온다. 코드에 "월간"·"전월"을 박으면
 #   주간 프로젝트로 이식했을 때 표지와 표 머리가 사실과 어긋난 채 남는다.
@@ -120,7 +119,8 @@ def _mom_flagged(ctx) -> list[dict]:
     """
     v = ctx.get("validation") or {}
     return [x for x in v.get("항목", [])
-            if x.get("검증명") == vd.MOM_CHECK and x.get("판정") == "경고"]
+            if x.get("검증명") in getattr(config, "MOM_CHECK_ALIASES", ("전주 대비", "전월 대비"))
+            and x.get("판정") == "경고"]
 
 
 def _flag_sentences(ctx) -> list[str]:

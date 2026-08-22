@@ -688,7 +688,9 @@ for n, name, who in common.STEPS[3:]:
             f"<span style='color:#64748b;font-size:0.9em'>대상 기간 {ss.metrics_df['month'].iloc[0]}"
             f" · 카탈로그 {m_meta.get('생성일시', '?')}</span>", unsafe_allow_html=True)
 
-        signals = [x for x in v["항목"] if x["검증명"] == vd.MOM_CHECK and x["판정"] == "경고"]
+        signals = [x for x in v["항목"]
+                   if x["검증명"] in getattr(config, "MOM_CHECK_ALIASES", ("전주 대비", "전월 대비"))
+                   and x["판정"] == "경고"]
         if signals:
             st.markdown("**이상 신호 " + str(len(signals)) + "건**")
             for x in signals:

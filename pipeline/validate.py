@@ -21,9 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common  # noqa: E402
 import config  # noqa: E402
 
-# ★ 이 문자열은 **화면에 보이는 이름이자 조회 키**다(report.py·app.py가 이 값으로
-#   경고를 골라낸다). 두 곳에 따로 적으면 한쪽만 고쳤을 때 조용히 0건이 된다.
-MOM_CHECK = f'{getattr(config, "PREV_LABEL", "전월")} 대비'
+# 검증명은 config 한 곳에서 온다 — 여기서 다시 만들지 않는다.
+#   (이 모듈에 정의를 두었더니 배포본이 옛 모듈을 붙들어 AttributeError 로 죽었다.)
+MOM_CHECK = config.MOM_CHECK
 
 
 # 자동으로 하지 않는 검증 — 반드시 함께 내보낸다
