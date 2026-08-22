@@ -13,7 +13,7 @@
 
 ## 화면에서 바로 보기
 
-사이드바 **기존 실행 불러오기** → **`✔ run_20260822_2019`** → **이 실행 불러오기**
+사이드바 **기존 실행 불러오기** → **`✔ run_20260822_2235`** → **이 실행 불러오기**
 
 발송 확정까지 마친 실행이라 **1~8단계 전 과정과 리포트·이메일 확정본**을 그대로 볼 수 있다.
 
@@ -113,6 +113,7 @@ CLI가 만든 실행은 사이드바에서 이어받는다. 게이트 2·3은 **
 app.py              8단계 화면 (Streamlit)
 run_pipeline.py     CLI — 1~7단계
 config.py           ★ 이식할 때 고치는 유일한 파일
+theme.py            ★ 화면의 모양(색·크기·선)을 정하는 유일한 파일
 catalog/            위키 → JSON 스냅샷 (앱이 읽는 유일한 정의 원천)
 pipeline/           profile·calculate·compare·validate·charts·report·pdf_render·email_*
 manual/sections.md  사람이 쓰는 2·5·6장 (재생성해도 남는다)

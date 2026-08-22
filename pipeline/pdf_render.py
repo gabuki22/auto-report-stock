@@ -43,7 +43,11 @@ FONT_FILES = (_FULL if all((FONT_DIR / n).exists() for n in _FULL.values())
 BLACK = (0, 0, 0)
 GRAY = (100, 116, 139)          # slate — CLAUDE.md 7절 "데이터 없음"과 같은 색
 LINE = (203, 213, 225)          # 표 테두리
-HEAD_BG = (241, 245, 249)       # 표 머리 배경
+HEAD_BG = (233, 238, 244)       # 표 머리 배경 — 칸이 보이게 조금 더 진하게
+# ★ 문서는 흰 종이 위에 인쇄된다. 화면의 금속 질감을 그대로 옮길 수는 없으므로
+#   **위계의 뜻만** 옮긴다 — 제목은 더 검게, 경계선은 또렷하게.
+HEAD = (15, 23, 42)             # 제목 글자 — 본문보다 진하게
+RAIL = (100, 116, 139)          # 장 제목 아래 레일 · 소제목 왼쪽 막대
 
 
 def _period_label() -> str:
@@ -260,13 +264,37 @@ def build_pdf(md: str, ctx: dict) -> bytes:
         if kind == "h1":
             continue                                   # 표지에 이미 있다
         if kind == "h2":
-            pdf.ln(3)
-            pdf.set_font(FONT_NAME, "B", 14)
-            pdf.multi_cell(0, 8, text, new_x="LMARGIN", new_y="NEXT")
-            pdf.ln(1)
+            # ★ 장 제목 아래 **레일**. 화면의 h2 밑줄과 같은 뜻이다 —
+            #   화면에서 큰 경계인 것이 문서에서도 큰 경계로 보여야 한다.
+            #   크기만 키우면 "조금 큰 글자"이지 장의 시작으로 읽히지 않는다.
+            pdf.ln(4)
+            pdf.set_font(FONT_NAME, "B", 15)
+            pdf.set_text_color(*HEAD)
+            pdf.multi_cell(0, 8.5, text, new_x="LMARGIN", new_y="NEXT")
+            _reset(pdf)
+            y = pdf.get_y() + 0.6
+            pdf.set_draw_color(*RAIL)
+            pdf.set_line_width(0.5)
+            pdf.line(pdf.l_margin, y, pdf.w - pdf.r_margin, y)
+            pdf.set_line_width(0.2)
+            _reset(pdf)
+            pdf.ln(3.2)
         elif kind == "h3":
-            pdf.set_font(FONT_NAME, "B", 11)
+            # 소제목 — 왼쪽 짧은 막대. 본문과 굵기만 다르면 눈이 건너뛴다.
+            pdf.ln(1.6)
+            # ★ 쪽이 넘어가면 `y0`은 **앞 쪽의 좌표**가 된다.
+            #   그대로 선을 그으면 새 쪽 엉뚱한 자리에 조각이 남는다(실측: 3쪽 위 짧은 막대).
+            #   쪽 번호를 함께 들고 있다가, 넘어갔으면 새 쪽의 윗여백부터 긋는다.
+            p0, y0 = pdf.page_no(), pdf.get_y()
+            pdf.set_font(FONT_NAME, "B", 11.5)
+            pdf.set_x(pdf.l_margin + 3.2)
             pdf.multi_cell(0, 7, text, new_x="LMARGIN", new_y="NEXT")
+            top = y0 + 1.2 if pdf.page_no() == p0 else pdf.t_margin
+            pdf.set_draw_color(*RAIL)
+            pdf.set_line_width(1.1)
+            pdf.line(pdf.l_margin + 0.4, top, pdf.l_margin + 0.4, pdf.get_y() - 1.2)
+            pdf.set_line_width(0.2)
+            _reset(pdf)
         elif kind == "quote":
             # 인용 — 왼쪽 여백을 주고 회색으로. 앱이 쓴 문장과 구분된다
             pdf.set_font(FONT_NAME, "", 9)

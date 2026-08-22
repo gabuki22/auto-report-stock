@@ -7,3 +7,15 @@ headless = true
 
 [browser]
 gatherUsageStats = false
+
+# ── 테마 ──────────────────────────────────────────────────────────────
+# ★ 밝게/어둡게를 **보는 사람 설정에 맡기지 않는다.**
+#   인라인 색은 한쪽 배경을 가정하고 고르게 되는데, 반대 테마로 열리면
+#   글자가 배경에 묻힌다(실측: 밝은 기준 회색 #475569 이 어두운 화면에서 안 읽혔다).
+#   자세한 색·크기는 theme.py 한 파일에 있다.
+[theme]
+base = "dark"
+primaryColor = "#9fb6cd"
+backgroundColor = "#0c0f13"
+secondaryBackgroundColor = "#161b22"
+textColor = "#e8eef6"

@@ -35,7 +35,22 @@ from pipeline import report as rp
 from pipeline import run_log as rl
 from pipeline import validate as vd
 
+import theme  # noqa: E402
+
 st.set_page_config(page_title=config.APP_TITLE, layout="wide")
+# 화면의 모양은 theme.py 한 파일이 정한다 — 색·크기를 코드에 흩지 않는다.
+theme.inject(st)
+
+
+def badge(text: str, kind: str | None = None) -> str:
+    """화면용 배지 — **어두운 바탕에 맞춘 톤**.
+
+    메일·PDF는 흰 바탕이므로 `common.badge`를 그대로 쓴다. 매체를 인자로 명시하는
+    이유는 화면과 메일이 같은 프로세스에서 돌기 때문이다 — 전역으로 바꾸면
+    메일 배지까지 화면 톤이 되어 흰 바탕에서 흐려진다.
+    """
+    return common.badge(text, kind, dark=True)
+
 
 
 @st.cache_data(show_spinner="PDF 만드는 중…")
@@ -195,7 +210,7 @@ st.caption("파일을 넣으면 판정·계산·검증·리포트까지 흐릅�
 st.markdown("---")
 done1 = ss.df is not None
 st.markdown(f"## 1단계 — 데이터 파일 투입 "
-            f"{common.badge('완료' if done1 else '진행중', '통과' if done1 else '경고')}",
+            f"{badge('완료' if done1 else '진행중', '통과' if done1 else '경고')}",
             unsafe_allow_html=True)
 
 # ★ 자격증명이 없으면 업로드를 **아예 막는다.**
@@ -244,27 +259,27 @@ if ss.df is not None:
 # ── 2단계 — 스키마 점검 → 지표 계산 (전반: 판정) ──────────────────────
 st.markdown("---")
 if ss.df is None:
-    st.markdown(f"## 2단계 — 스키마 점검 → 지표 계산 {common.badge('대기', '정보')}",
+    st.markdown(f"## 2단계 — 스키마 점검 → 지표 계산 {badge('대기', '정보')}",
                 unsafe_allow_html=True)
     st.caption("1단계에서 파일을 올리면 판정이 시작됩니다.")
 else:
-    st.markdown(f"## 2단계 — 스키마 점검 → 지표 계산 {common.badge('진행중', '경고')}",
+    st.markdown(f"## 2단계 — 스키마 점검 → 지표 계산 {badge('진행중', '경고')}",
                 unsafe_allow_html=True)
     df = ss.df
 
     # 1. 테이블 판정
     t = pf.judge_table(df, schema)
     ok = t.get("판정가능")
-    st.markdown(f"### 1. 테이블 판정 &nbsp; {common.badge(t.get('테이블명', '판정 불가'), '통과' if ok else '차단')} "
+    st.markdown(f"### 1. 테이블 판정 &nbsp; {badge(t.get('테이블명', '판정 불가'), '통과' if ok else '차단')} "
                 f"&nbsp; 일치율 **{t.get('일치율', 0):.0%}** ({t.get('일치', 0)}/{t.get('카탈로그컬럼수', 0)})",
                 unsafe_allow_html=True)
     if not ok:
         st.error(t.get("이유", "판정 불가"))
     if t.get("누락컬럼"):
-        st.markdown(f"{common.badge('누락 컬럼', '경고')} &nbsp; `{'`, `'.join(t['누락컬럼'])}`",
+        st.markdown(f"{badge('누락 컬럼', '경고')} &nbsp; `{'`, `'.join(t['누락컬럼'])}`",
                     unsafe_allow_html=True)
     if t.get("추가컬럼"):
-        st.markdown(f"{common.badge('추가 컬럼', '정보')} &nbsp; 카탈로그에 없음 · `{'`, `'.join(t['추가컬럼'])}`",
+        st.markdown(f"{badge('추가 컬럼', '정보')} &nbsp; 카탈로그에 없음 · `{'`, `'.join(t['추가컬럼'])}`",
                     unsafe_allow_html=True)
     if t.get("테이블명_추정"):
         st.caption(f"테이블명은 노트명 `{t.get('노트명')}`에서 유도한 **추정값**입니다. "
@@ -286,7 +301,7 @@ else:
     ]
     cols = st.columns(len(cells))
     for col, (label, cellval, kind) in zip(cols, cells):
-        col.markdown(f"**{label}**<br>{cellval} {common.badge('통과' if kind == '통과' else '경고', kind)}",
+        col.markdown(f"**{label}**<br>{cellval} {badge('통과' if kind == '통과' else '경고', kind)}",
                      unsafe_allow_html=True)
     if gr:
         st.caption(f"그레인 키: {' × '.join(gr['키'])}")
@@ -316,9 +331,9 @@ else:
                 "<th align='left'>상태</th><th align='left'>이유</th><th align='left'>원천</th></tr>")
         body = "".join(
             f"<tr><td>{r['지표명']}</td><td><code>{r['metric_id']}</code></td>"
-            f"<td>{common.badge(r['상태'])}</td>"
-            f"<td style='font-size:0.88em;color:#475569'>{r['이유'] or '—'}</td>"
-            f"<td style='font-size:0.88em;color:#475569'>{r['원천']}</td></tr>" for r in rs)
+            f"<td>{badge(r['상태'])}</td>"
+            f"<td style='font-size:0.88em;color:var(--tk-text-dim)'>{r['이유'] or '—'}</td>"
+            f"<td style='font-size:0.88em;color:var(--tk-text-dim)'>{r['원천']}</td></tr>" for r in rs)
         return (f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>")
 
     st.markdown(table(related), unsafe_allow_html=True)
@@ -368,7 +383,7 @@ else:
 
     partial_ok = True
     if blocked and target:
-        st.markdown(f"{common.badge('계산불가', '차단')} &nbsp; **{len(blocked)}종** — "
+        st.markdown(f"{badge('계산불가', '차단')} &nbsp; **{len(blocked)}종** — "
                     + " · ".join(f"{r['지표명']}" for r in blocked), unsafe_allow_html=True)
         partial_ok = st.checkbox(
             f"**일부만 계산**합니다 — 가능한 {len(target)}종만 돌리고 {len(blocked)}종은 건너뜁니다",
@@ -504,14 +519,14 @@ else:
             # 위 판정표에서 "이 파일과 무관"이던 지표가 여기 나오는 이유를 밝힌다.
             # 밝히지 않으면 두 표가 어긋난 것처럼 보인다.
             if str(r.get("포함사유") or ""):
-                mark += (" <span style='color:#64748b;font-size:0.8em'>"
+                mark += (" <span style='color:var(--tk-text-faint);font-size:0.8em'>"
                          f"({r['포함사유']})</span>")
             samp = f"{r['sample_size']:,.0f}" if pd.notna(r["sample_size"]) else "—"
             body += (f"<tr><td>{r['지표명']}{mark}</td>"
                      f"<td align='right'><b>{common.fmt_value(r)}</b></td>"
-                     f"<td align='right' style='color:#64748b'>{samp}</td>"
-                     f"<td>{common.badge(r['status'])}</td>"
-                     f"<td style='font-size:0.86em;color:#475569'>{r['원천']}</td></tr>")
+                     f"<td align='right' style='color:var(--tk-text-faint)'>{samp}</td>"
+                     f"<td>{badge(r['status'])}</td>"
+                     f"<td style='font-size:0.86em;color:var(--tk-text-dim)'>{r['원천']}</td></tr>")
         st.markdown(f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>",
                     unsafe_allow_html=True)
         n_dep = int((res["포함사유"] != "").sum()) if "포함사유" in res else 0
@@ -557,7 +572,7 @@ else:
             except Exception:                                   # noqa: BLE001
                 prev_period = cmp.previous_month(period)
         st.markdown("---")
-        st.markdown(f"### 5. 전월 대비 &nbsp;<span style='font-size:0.72em;color:#64748b'>"
+        st.markdown(f"### 5. 전월 대비 &nbsp;<span style='font-size:0.72em;color:var(--tk-text-faint)'>"
                     f"{period} vs {prev_period}</span>", unsafe_allow_html=True)
 
         if ss.comparison_df is None:
@@ -591,14 +606,14 @@ else:
                 cur_v = common.fmt_value({**r, "value": r["당월"]})
                 prv_v = common.fmt_value({**r, "value": r["전월"]})
                 if r["비교상태"] != "비교 가능":
-                    cell = (f"<td colspan='2' align='right'>{common.badge('비교 불가', '정보')}"
-                            f" <span style='font-size:0.82em;color:#64748b'>{r['이유']}</span></td>")
+                    cell = (f"<td colspan='2' align='right'>{badge('비교 불가', '정보')}"
+                            f" <span style='font-size:0.82em;color:var(--tk-text-faint)'>{r['이유']}</span></td>")
                 else:
                     cell = (f"<td align='right'>{common.fmt_delta(r)}</td>"
                             f"<td align='right'>{common.fmt_rate(r)}</td>")
                 body += (f"<tr><td>{r['지표명']}</td>"
                          f"<td align='right'>{cur_v}</td>"
-                         f"<td align='right' style='color:#64748b'>{prv_v}</td>{cell}</tr>")
+                         f"<td align='right' style='color:var(--tk-text-faint)'>{prv_v}</td>{cell}</tr>")
             st.markdown(f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>",
                         unsafe_allow_html=True)
             st.caption("방향만 표시합니다 — 증가가 좋은지 나쁜지는 판단하지 않습니다. "
@@ -624,11 +639,11 @@ else:
 st.markdown("---")
 v = ss.validation
 if v is None:
-    st.markdown(f"## 3단계 — 검증 실행 {common.badge('대기', '정보')}", unsafe_allow_html=True)
+    st.markdown(f"## 3단계 — 검증 실행 {badge('대기', '정보')}", unsafe_allow_html=True)
     st.caption("2단계 게이트를 확정하면 검증이 자동으로 돕니다.")
 else:
     kind = {"통과": "통과", "경고": "경고", "차단": "차단"}[v["전체판정"]]
-    st.markdown(f"## 3단계 — 검증 실행 {common.badge('완료', '통과')}", unsafe_allow_html=True)
+    st.markdown(f"## 3단계 — 검증 실행 {badge('완료', '통과')}", unsafe_allow_html=True)
 
     # 1. 전체 판정 — 상단 크게
     color = common.STATUS[kind][0]
@@ -636,7 +651,7 @@ else:
         f"<div style='border:2px solid {color};background:{color}14;border-radius:10px;"
         f"padding:14px 18px;margin:6px 0 14px'>"
         f"<span style='font-size:1.55em;font-weight:700;color:{color}'>{v['전체판정']}</span>"
-        f"<span style='margin-left:14px;color:#475569'>차단 <b>{v['차단수']}건</b> · "
+        f"<span style='margin-left:14px;color:var(--tk-text-dim)'>차단 <b>{v['차단수']}건</b> · "
         f"경고 <b>{v['경고수']}건</b> · 점검 {len(v['항목'])}건</span></div>",
         unsafe_allow_html=True)
 
@@ -664,7 +679,7 @@ blocked_here = bool(v and v["차단수"])
 for n, name, who in common.STEPS[3:]:
     st.markdown("---")
     if n == 4 and blocked_here:
-        st.markdown(f"## 4단계 — {name} {common.badge('차단', '차단')}", unsafe_allow_html=True)
+        st.markdown(f"## 4단계 — {name} {badge('차단', '차단')}", unsafe_allow_html=True)
         st.error(f"검증에서 차단 {v['차단수']}건이 나와 진행할 수 없습니다. "
                  "위 3단계에서 차단 항목을 확인하고, **데이터나 정의를 고친 뒤 다시 계산**하세요.")
         for x in v["항목"]:
@@ -674,7 +689,7 @@ for n, name, who in common.STEPS[3:]:
         #   우회로를 두면 게이트가 아니라 장식이 된다.
         break
     if n == 4 and v:
-        st.markdown(f"## 4단계 — {name} {common.badge('진행중', '경고')}", unsafe_allow_html=True)
+        st.markdown(f"## 4단계 — {name} {badge('진행중', '경고')}", unsafe_allow_html=True)
         comp = ss.comparison_df
         cmap = {r["metric_id"]: r for _, r in comp.iterrows()} if comp is not None and len(comp) else {}
         mmap = {r["metric_id"]: r for _, r in ss.metrics_df.iterrows()}
@@ -683,9 +698,9 @@ for n, name, who in common.STEPS[3:]:
         # ── 한눈에 ────────────────────────────────────────────────────
         vk = v["전체판정"]
         st.markdown(
-            f"{common.badge(vk)} &nbsp; <b>차단 {v['차단수']}</b> / 경고 {v['경고수']}"
-            f" &nbsp;<span style='color:#94a3b8'>·</span>&nbsp; "
-            f"<span style='color:#64748b;font-size:0.9em'>대상 기간 {ss.metrics_df['month'].iloc[0]}"
+            f"{badge(vk)} &nbsp; <b>차단 {v['차단수']}</b> / 경고 {v['경고수']}"
+            f" &nbsp;<span style='color:var(--tk-text-faint)'>·</span>&nbsp; "
+            f"<span style='color:var(--tk-text-faint);font-size:0.9em'>대상 기간 {ss.metrics_df['month'].iloc[0]}"
             f" · 카탈로그 {m_meta.get('생성일시', '?')}</span>", unsafe_allow_html=True)
 
         signals = [x for x in v["항목"]
@@ -753,18 +768,18 @@ for n, name, who in common.STEPS[3:]:
                          f"style='color:{amber};font-size:0.8em'>◍</span>")
             samp = f"{r['sample_size']:,.0f}" if pd.notna(r.get("sample_size")) else "—"
             if str(c.get("비교상태", "")) != "비교 가능":
-                mid_cells = (f"<td colspan='3' align='right'>{common.badge('비교 불가', '정보')}"
-                             f" <span style='font-size:0.8em;color:#64748b'>{c.get('이유', '')}</span></td>")
+                mid_cells = (f"<td colspan='3' align='right'>{badge('비교 불가', '정보')}"
+                             f" <span style='font-size:0.8em;color:var(--tk-text-faint)'>{c.get('이유', '')}</span></td>")
             else:
-                mid_cells = (f"<td align='right' style='color:#64748b'>"
+                mid_cells = (f"<td align='right' style='color:var(--tk-text-faint)'>"
                              f"{common.fmt_value({**r, 'value': c.get('전월')})}</td>"
                              f"<td align='right'>{common.fmt_delta(merged)}</td>"
                              f"<td align='right'>{common.fmt_rate(merged)}</td>")
             body += (f"<tr{bg}><td>{r['지표명']}{pmark}</td>"
                      f"<td align='right'><b>{common.fmt_value(r)}</b></td>"
                      f"{mid_cells}"
-                     f"<td align='right' style='color:#64748b'>{samp}</td>"
-                     f"<td>{common.badge(r['status'])}</td></tr>")
+                     f"<td align='right' style='color:var(--tk-text-faint)'>{samp}</td>"
+                     f"<td>{badge(r['status'])}</td></tr>")
         st.markdown(f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>",
                     unsafe_allow_html=True)
         st.caption(f"옅은 주황 배경 = {_PREV} 대비 변화율이 임계값 {config.MOM_THRESHOLD:g}% 이상인 행")
@@ -775,7 +790,7 @@ for n, name, who in common.STEPS[3:]:
                            for s in common.blank_safe(r.get("부분갱신")).split(", ") if s})
             st.markdown(
                 f"<div style='border:1px solid {slate2}55;background:{slate2}12;"
-                f"border-radius:10px;padding:12px 18px;margin-top:10px;color:#475569'>"
+                f"border-radius:10px;padding:12px 18px;margin-top:10px;color:var(--tk-text-dim)'>"
                 f"<b style='color:{slate2}'>부분 갱신</b><br>"
                 f"{', '.join(partial_names)}는 <code>{', '.join(srcs)}</code> 테이블을 함께 "
                 f"사용합니다. 업로드된 것은 <code>{t.get('테이블명')}</code>뿐이므로 "
@@ -788,7 +803,7 @@ for n, name, who in common.STEPS[3:]:
                      "<th align='left'>쓰는 테이블</th></tr>")
             ubody = "".join(
                 f"<tr><td>{u['지표명']}</td><td><code>{u['metric_id']}</code></td>"
-                f"<td style='color:#475569;font-size:0.9em'>{u['원천']}</td></tr>"
+                f"<td style='color:var(--tk-text-dim);font-size:0.9em'>{u['원천']}</td></tr>"
                 for u in unrelated)
             st.markdown(f"<table style='width:100%;border-collapse:collapse'>{uhead}{ubody}</table>",
                         unsafe_allow_html=True)
@@ -863,7 +878,7 @@ for n, name, who in common.STEPS[3:]:
     if n == 5 and v is not None and not blocked_here:
         done = bool(ss.confirmed_at)
         st.markdown(f"## 5단계 — {name} "
-                    f"{common.badge('완료' if done else '확인 필요', '통과' if done else '경고')}",
+                    f"{badge('완료' if done else '확인 필요', '통과' if done else '경고')}",
                     unsafe_allow_html=True)
         st.caption("여기서부터는 시스템이 아니라 **사람이 판단합니다.** "
                    "아래 항목을 확인하고 리포트를 발행할지 결정하세요.")
@@ -878,7 +893,7 @@ for n, name, who in common.STEPS[3:]:
         for it in checklist:
             if not it["해당"]:
                 # 해당 없는 항목은 자동 충족. 없는 것을 확인하라고 시키지 않는다.
-                st.markdown(f"<span style='color:#64748b'>☑ {it['라벨']}</span>",
+                st.markdown(f"<span style='color:var(--tk-text-faint)'>☑ {it['라벨']}</span>",
                             unsafe_allow_html=True)
                 st.caption(it["상세"])
                 continue
@@ -938,7 +953,7 @@ for n, name, who in common.STEPS[3:]:
     if n == 6 and ss.confirmed_at:
         made = bool(ss.report_md)
         st.markdown(f"## 6단계 — {name} "
-                    f"{common.badge('완료' if made else '준비됨', '통과')}",
+                    f"{badge('완료' if made else '준비됨', '통과')}",
                     unsafe_allow_html=True)
         st.caption("화면이 아니라 **문서**를 만듭니다. 자동 생성되는 장은 계산·검증 결과를 "
                    "그대로 서술하고, 2·5·6장은 자리를 비워 사람이 쓰도록 남깁니다.")
@@ -1014,7 +1029,7 @@ for n, name, who in common.STEPS[3:]:
             mi = ss.merge_info or {}
             if mi.get("병합"):
                 st.markdown(
-                    common.badge(f"병합됨 {len(mi['병합'])}장", "통과")
+                    badge(f"병합됨 {len(mi['병합'])}장", "통과")
                     + " &nbsp; " + " · ".join(
                         f"{n}장 {rp.HUMAN_SECTIONS[n]['제목']}" for n in mi["병합"]),
                     unsafe_allow_html=True)
@@ -1044,7 +1059,7 @@ for n, name, who in common.STEPS[3:]:
                 with st.expander(f"{s['번호']}. {s['제목']}{mark}",
                                  expanded=not s["미작성"]):
                     if s["미작성"]:
-                        st.markdown(common.badge("작성 필요", "경고"),
+                        st.markdown(badge("작성 필요", "경고"),
                                     unsafe_allow_html=True)
                     # 마크다운 표는 st.markdown이 그대로 그린다.
                     # st.dataframe으로 바꾸면 리포트 파일과 화면이 다른 모양이 된다.
@@ -1111,7 +1126,7 @@ for n, name, who in common.STEPS[3:]:
     if n == 7 and ss.report_md:
         drafted = bool(ss.email)
         st.markdown(f"## 7단계 — {name} "
-                    f"{common.badge('완료' if drafted else '준비됨', '통과')}",
+                    f"{badge('완료' if drafted else '준비됨', '통과')}",
                     unsafe_allow_html=True)
         st.caption("**실제로 보내지 않습니다.** 발송 준비된 최종본을 만들고, "
                    "8주차에 이 자리에 SMTP를 꽂으면 완성됩니다.")
@@ -1151,7 +1166,7 @@ for n, name, who in common.STEPS[3:]:
             with st.container(border=True):
                 st.markdown(
                     f"**제목** &nbsp; {mail['subject']}<br>"
-                    f"<span style='color:#64748b'>**수신** {', '.join(mail['to'])} "
+                    f"<span style='color:var(--tk-text-faint)'>**수신** {', '.join(mail['to'])} "
                     f"&nbsp;·&nbsp; **발신** {mail['from']}</span>",
                     unsafe_allow_html=True)
 
@@ -1168,8 +1183,8 @@ for n, name, who in common.STEPS[3:]:
             body = ""
             for a in ed.attachments(ss.run_dir, only_existing=False):
                 size = f"{a['size'] / 1024:,.0f} KB" if a["존재"] else "—"
-                mark = common.badge("있음", "통과") if a["존재"] \
-                    else common.badge("없음", "차단")
+                mark = badge("있음", "통과") if a["존재"] \
+                    else badge("없음", "차단")
                 body += (f"<tr><td><code>{a['filename']}</code></td>"
                          f"<td align='right'>{size}</td><td>{mark}</td></tr>")
             st.markdown(f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>",
@@ -1195,14 +1210,14 @@ for n, name, who in common.STEPS[3:]:
         approved_path = rd / "APPROVED"
         done8 = approved_path.exists()
         st.markdown(f"## 8단계 — {name} "
-                    f"{common.badge('완료' if done8 else '확인 필요', '통과' if done8 else '경고')}",
+                    f"{badge('완료' if done8 else '확인 필요', '통과' if done8 else '경고')}",
                     unsafe_allow_html=True)
 
         if done8:
             info = json.loads(approved_path.read_text(encoding="utf-8"))
             st.success(f"**확정 완료** · {info.get('발송확정_시각', '')}")
             st.markdown(f"제목 **{info.get('제목', '')}**<br>"
-                        f"<span style='color:#64748b'>수신 {', '.join(info.get('수신자', []))}</span>",
+                        f"<span style='color:var(--tk-text-faint)'>수신 {', '.join(info.get('수신자', []))}</span>",
                         unsafe_allow_html=True)
             st.caption(f"저장: `{rd.name}/APPROVED` · `{rd.name}/email_final.html` "
                        "— 확정본은 이후 재생성해도 바뀌지 않습니다.")
@@ -1252,7 +1267,7 @@ for n, name, who in common.STEPS[3:]:
         checked8 = []
         for it in checklist:
             if not it["해당"]:
-                st.markdown(f"<span style='color:#64748b'>☑ {it['라벨']}</span>",
+                st.markdown(f"<span style='color:var(--tk-text-faint)'>☑ {it['라벨']}</span>",
                             unsafe_allow_html=True)
                 st.caption(it["상세"])
                 continue
@@ -1303,17 +1318,17 @@ for n, name, who in common.STEPS[3:]:
         label, kind2 = ("준비됨", "통과")
     else:
         label, kind2 = ("대기", "정보")
-    st.markdown(f"## {n}단계 — {name} {common.badge(label, kind2)}", unsafe_allow_html=True)
+    st.markdown(f"## {n}단계 — {name} {badge(label, kind2)}", unsafe_allow_html=True)
 
 
 # ── 사이드바 채우기 (계산·검증이 끝난 뒤의 상태로) ────────────────────
 with step_slot.container():
     for n, name, who in common.STEPS:
-        mark, color = ("✓", "#10b981") if n < ss.step else                       ("▶", "#f59e0b") if n == ss.step else ("·", "#64748b")
+        mark, color = ("✓", "#10b981") if n < ss.step else                       ("▶", "#f59e0b") if n == ss.step else ("·", "var(--tk-text-faint)")
         weight = "600" if n == ss.step else "400"
         st.markdown(
             f'<div style="color:{color};font-weight:{weight};font-size:0.9em;line-height:1.7">'
-            f'{mark} {n}. {name}<span style="color:#94a3b8;font-size:0.85em"> · {who}</span></div>',
+            f'{mark} {n}. {name}<span style="color:var(--tk-text-faint);font-size:0.85em"> · {who}</span></div>',
             unsafe_allow_html=True)
 
 if ss.run_dir:
@@ -1327,8 +1342,8 @@ if ss.run_dir:
                        f"{ss.metrics_df['month'].iloc[0]}")
         if ss.validation:
             vv = ss.validation
-            st.markdown(f"검증 {common.badge(vv['전체판정'])} &nbsp; "
-                        f"<span style='color:#475569;font-size:0.9em'>차단 {vv['차단수']} / "
+            st.markdown(f"검증 {badge(vv['전체판정'])} &nbsp; "
+                        f"<span style='color:var(--tk-text-dim);font-size:0.9em'>차단 {vv['차단수']} / "
                         f"경고 {vv['경고수']}</span>", unsafe_allow_html=True)
 
 # ── 실행 기록 ─────────────────────────────────────────────────────────
@@ -1342,10 +1357,10 @@ if ss.run_dir:
                 "<th align='right'>소요</th><th align='left'>내용</th></tr>")
         body = ""
         for r in rl.rows(log):
-            gray = " style='color:#94a3b8'" if r["내용"] == "미실행" else ""
+            gray = " style='color:var(--tk-text-faint)'" if r["내용"] == "미실행" else ""
             body += (f"<tr{gray}><td>{r['단계']}</td><td>{r['시각']}</td>"
                      f"<td align='right'>{r['소요초']}</td>"
-                     f"<td style='font-size:0.86em;color:#475569'>{r['내용']}</td></tr>")
+                     f"<td style='font-size:0.86em;color:var(--tk-text-dim)'>{r['내용']}</td></tr>")
         st.markdown(f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>",
                     unsafe_allow_html=True)
         envd = (log.get("_meta") or {}).get("환경") or {}

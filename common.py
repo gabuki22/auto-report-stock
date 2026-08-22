@@ -48,9 +48,23 @@ def blank_safe(v) -> str:
     return str(v)
 
 
-def badge(text: str, kind: str | None = None) -> str:
-    """상태 배지 HTML. kind를 안 주면 text로 색을 정한다."""
-    color = STATUS[STATUS_MAP.get(kind or text, "정보")][0]
+# ★ 같은 뜻의 색이라도 **바탕에 따라 밝기가 달라야 읽힌다.**
+#   slate(#64748b)는 흰 종이에서는 알맞은 회색이지만 어두운 화면에서는 대비 3.63으로
+#   AA(4.5)에 못 미친다(실측). 화면에서만 한 단계 밝은 회색을 쓴다.
+#   ⚠️ 뜻의 대응(정보=slate)은 그대로다 — CLAUDE.md 7절이 금지한 것은 **대응 변경**이지
+#      같은 색을 매체에 맞춰 조절하는 것이 아니다.
+#   ⚠️ 전역 스위치로 만들지 않는다. 화면과 메일이 **같은 프로세스**에서 돌기 때문에
+#      한쪽이 바꾸면 다른 쪽 배지까지 따라 바뀐다.
+SCREEN_TONE = {"정보": "#94a3b8"}
+
+
+def badge(text: str, kind: str | None = None, dark: bool = False) -> str:
+    """상태 배지 HTML. kind를 안 주면 text로 색을 정한다.
+
+    dark=True 는 **어두운 화면용**이다. 메일·PDF(흰 바탕)는 기본값을 쓴다.
+    """
+    key = STATUS_MAP.get(kind or text, "정보")
+    color = (SCREEN_TONE.get(key) if dark else None) or STATUS[key][0]
     return (f'<span style="background:{color}22;color:{color};border:1px solid {color}55;'
             f'border-radius:6px;padding:1px 8px;font-size:0.82em;white-space:nowrap;">{text}</span>')
 
@@ -252,13 +266,13 @@ def validation_table(items: list[dict]) -> str:
         if not has_basis:
             return ""
         v = str(x.get("기준") or "")
-        color = "#94a3b8" if "기본값" in v else "#334155"
+        color = "var(--tk-text-faint)" if "기본값" in v else "var(--tk-text)"
         return f"<td style='font-size:0.88em;color:{color};white-space:nowrap'>{v}</td>"
 
     body = "".join(
         f"<tr><td>{x['검증명']}</td><td>{x['대상지표']}</td>"
         f"<td>{badge(x['판정'])}</td>{basis_td(x)}"
-        f"<td style='font-size:0.88em;color:#475569'>{x['상세']}</td></tr>" for x in items)
+        f"<td style='font-size:0.88em;color:var(--tk-text-dim)'>{x['상세']}</td></tr>" for x in items)
     return f"<table style='width:100%;border-collapse:collapse'>{head}{body}</table>"
 
 
@@ -431,15 +445,15 @@ def not_automated_box(items: list[str]) -> str:
     return (f"<div style='border:1px solid {slate}55;background:{slate}12;border-radius:10px;"
             f"padding:12px 18px;margin-top:12px'>"
             f"<b style='color:{slate}'>이 검증은 수행되지 않았습니다</b>"
-            f"<ul style='margin:8px 0 4px 18px;color:#475569;font-size:0.92em'>{lis}</ul>"
-            f"<div style='color:#64748b;font-size:0.88em'>이 항목들은 판단이 필요해 자동화하지 "
+            f"<ul style='margin:8px 0 4px 18px;color:var(--tk-text-dim);font-size:0.92em'>{lis}</ul>"
+            f"<div style='color:var(--tk-text-faint);font-size:0.88em'>이 항목들은 판단이 필요해 자동화하지 "
             f"않았습니다. 리포트 한계 절에 명시됩니다.</div></div>")
 
 
 # ── 추이 차트 ─────────────────────────────────────────────────────────
 # DESIGN.md의 Tailwind 500 팔레트
 LINE = {"blue": "#3b82f6", "emerald": "#10b981", "amber": "#f59e0b",
-        "violet": "#8b5cf6", "rose": "#f43f5e", "slate": "#64748b"}
+        "violet": "#8b5cf6", "rose": "#f43f5e", "slate": "var(--tk-text-faint)"}
 
 # ★ 차트 스펙은 **config에** 둔다. 어떤 지표를 어떤 축에 그릴지는 프로젝트마다 다르고,
 #   코드에 두면 이식할 때 화면이 남의 도메인 지표로 덮인다.
