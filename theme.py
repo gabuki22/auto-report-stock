@@ -145,6 +145,26 @@ h3, [data-testid="stMarkdownContainer"] h3 {{
   padding: .5rem .7rem; border-bottom: 1px solid var(--tk-line);
   font-size: var(--fs-small) !important; color: var(--tk-text);
   vertical-align: top;
+  /* ★ 한글은 **어절 단위로** 끊는다.
+     기본값은 글자 아무 데서나 끊어서, 열이 좁아지면
+     "A/S 수 주 잔 량"처럼 한 글자씩 세로로 쌓인다(실측: 부록 8-1 표). */
+  word-break: keep-all;
+}}
+/* 첫 열 = 이름 열. 여기가 밀리면 표 전체가 읽히지 않는다.
+   최소 너비를 주되 위에서 정한 어절 끊기로 자연스러운 폭을 잡게 둔다. */
+/* ★ 이름 열은 **줄바꿈하지 않는다.**
+   이름이 세로로 쌓이면 표를 훑을 수 없다(실측: "취소 수주 관련 재고금액"이 4줄).
+   `min-width`로는 부족했다 — 긴 산식이 남는 폭을 다 가져가 최소폭에 붙어 버린다.
+   `:has(code)`로 산식 열만 줄이려 했더니 **metric_id 열까지** 잡혔다(둘 다 코드다).
+   그래서 폭을 다투는 대신 **이름은 한 줄로 고정**하고, 넘치면 표만 가로로 민다. */
+[data-testid="stMarkdownContainer"] td:first-child,
+[data-testid="stMarkdownContainer"] th:first-child {{ white-space: nowrap; }}
+/* 표가 넘치면 **표만** 스크롤한다 — 페이지 전체가 옆으로 밀리면 안 된다. */
+[data-testid="stMarkdownContainer"]:has(table) {{ overflow-x: auto; }}
+/* 긴 산식·코드는 **어디서든 끊어** 다른 열을 밀지 않게 한다.
+   이름은 어절로, 코드는 아무 데서나 — 두 규칙이 서로 반대인 것이 맞다. */
+[data-testid="stMarkdownContainer"] td code {{
+  overflow-wrap: anywhere; word-break: break-all; white-space: normal;
 }}
 /* 세로 칸 구분 — 첫 열 빼고 왼쪽 선. 열이 많을수록 이게 있어야 눈이 안 흐른다 */
 [data-testid="stMarkdownContainer"] td + td,
