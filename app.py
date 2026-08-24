@@ -230,6 +230,24 @@ with st.sidebar:
 st.title(config.APP_TITLE)
 st.caption("파일을 넣으면 판정·계산·검증·리포트까지 흐릅니다. 사용자는 넣기 1회 + 승인 3회.")
 
+# ── 소스 받아가기 ─────────────────────────────────────────────────────
+# ★ 화면을 본 사람이 **코드를 찾으러 나가지 않게** 한다.
+#   스크립트 한 파일만 받으면 돌지 않는다(pipeline/·config.py·catalog/ 가 함께 필요).
+#   그래서 파일과 저장소를 **둘 다** 주고, 그 사실을 캡션에 밝힌다 —
+#   받아서 안 돌아가는 것이 링크가 없는 것보다 나쁘다.
+_cli = config.BASE_DIR / getattr(config, "CLI_FILE", "run_pipeline.py")
+_repo = getattr(config, "REPO_URL", "")
+if _cli.exists() or _repo:
+    _c1, _c2, _c3 = st.columns([1, 1, 3])
+    if _cli.exists():
+        _c1.download_button(f"{_cli.name} ↓", _cli.read_bytes(), file_name=_cli.name,
+                            mime="text/x-python", width="stretch")
+    if _repo:
+        _c2.link_button("저장소 열기", _repo, width="stretch")
+    _c3.caption("이 화면을 만드는 자동화 스크립트입니다. "
+                "**한 파일만으로는 돌지 않습니다** — `pipeline/`·`config.py`·`catalog/`가 "
+                "함께 있어야 하므로, 실제로 돌려 보시려면 저장소를 받으세요.")
+
 # ── 1단계 — 데이터 파일 투입 ──────────────────────────────────────────
 st.markdown("---")
 done1 = ss.df is not None
